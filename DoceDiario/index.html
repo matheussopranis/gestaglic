@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diário Glicêmico</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { -webkit-tap-highlight-color: transparent; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
+</head>
+<body class="bg-pink-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Ícones ---
+        const Icon = ({ path, className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{path}</svg>;
+        const Activity = (p) => <Icon {...p} path={<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />} />;
+        const LogOut = (p) => <Icon {...p} path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></>} />;
+        const Trash2 = (p) => <Icon {...p} path={<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>} />;
+
+        // --- Componentes UI ---
+        const Card = ({ children, className = "" }) => <div className={`bg-white rounded-xl shadow-sm border border-pink-100 overflow-hidden ${className}`}>{children}</div>;
+        const Button = ({ children, onClick, type="button", className = "", disabled=false }) => (
+            <button type={type} onClick={onClick} disabled={disabled} className={`px-4 py-3 rounded-lg font-medium transition-all active:scale-95 flex items-center justify-center gap-2 bg-pink-500 text-white shadow-pink-200 shadow-md disabled:opacity-50 ${className}`}>
+                {children}
+            </button>
+        );
+
+        // --- Configuração ---
+        const TARGETS = { jejum: 95, pos1h: 140, pos2h: 120, pre: 95 };
+        const MOMENTOS = [
+            { id: 'jejum', label: 'Jejum', target: TARGETS.jejum }, 
+            { id: 'pos_cafe_1h', label: '1h Pós-Café', target: TARGETS.pos1h }, 
+            { id: 'pos_cafe_2h', label: '2h Pós-Café', target: TARGETS.pos2h }, 
+            { id: 'pre_almoco', label: 'Pré-Almoço', target: TARGETS.pre }, 
+            { id: 'pos_almoco_1h', label: '1h Pós-Almoço', target: TARGETS.pos1h },
+            { id: 'pos_almoco_2h', label: '2h Pós-Almoço', target: TARGETS.pos2h },
+            { id: 'pre_jantar', label: 'Pré-Jantar', target: TARGETS.pre },
+            { id: 'pos_jantar_1h', label: '1h Pós-Jantar', target: TARGETS.pos1h },
+            { id: 'pos_jantar_2h', label: '2h Pós-Jantar', target: TARGETS.pos2h },
+            { id: 'ceia', label: 'Ceia', target: TARGETS.pre }, 
+        ];
+
+        const checkTarget = (value, momentoId) => {
+            const momento = MOMENTOS.find(m => m.id === momentoId);
+            return (!momento || value < momento.target) ? 'success' : 'warning';
+        };
+
+        const formatDate = (dateString) => {
+            if (!dateString) return '--/--';
+            const parts = dateString.split('-'); 
+            return `${parts[2]}/${parts[1]}`;
+        };
+
+        // --- FUNÇÃO API (A Ponte para o Backend) ---
+        async function apiCall(options = {}) {
+            // Caminho para o arquivo que criamos
+            const url = '/.netlify/functions/api'; 
+            
+            try {
+                const response = await fetch(url, options);
+                
+                // Pegamos o texto puro primeiro para diagnosticar erros HTML
+                const rawText = await response.text();
+
+                if (!response.ok) {
+                    // Diagnóstico de erros comuns
+                    if (response.status === 404) {
+                        throw new Error(`ERRO 404: O Netlify não encontrou o arquivo 'api.js'. Verifique se a pasta 'netlify/functions' existe no GitHub.`);
+                    }
+                    if (response.status === 500) {
+                        throw new Error("ERRO 500: Erro no servidor. Verifique se a variável DATABASE_URL está correta no Netlify.");
+                    }
+                    throw new Error(`Erro ${response.status}: ${rawText}`);
+                }
+
+                try {
+                    return JSON.parse(rawText);
+                } catch (e) {
+                    throw new Error("O servidor respondeu, mas não enviou dados válidos (JSON).");
+                }
+
+            } catch (error) {
+                console.error("Fetch Error:", error);
+                throw error;
+            }
+        }
+
+        // --- TELA DE LOGIN ---
+        const LoginScreen = ({ onLogin, loading }) => {
+            const [cpf, setCpf] = useState('');
+            const [dob, setDob] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                // Limpa tudo que não for número
+                const c = cpf.replace(/\D/g, '');
+                const d = dob.replace(/\D/g, '');
+                
+                if (c.length < 4 || d.length < 8) {
+                    alert("Preencha corretamente:\n- 4 primeiros dígitos do CPF\n- Data completa (DDMMAAAA)");
+                    return;
+                }
+                onLogin(c, d);
+            };
+
+            return (
+                <div className="min-h-screen bg-pink-50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-sm p-8 shadow-xl text-center space-y-6">
+                        <div className="bg-pink-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-pink-200">
+                            <Activity className="text-white w-8 h-8" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold text-slate-800">Diário Glicêmico</h1>
+                            <p className="text-slate-500 text-sm">Acesso Simplificado</p>
+                        </div>
+                        <form onSubmit={handleSubmit} className="space-y-4 text-left">
+                            <input 
+                                type="number" 
+                                placeholder="CPF (4 primeiros dígitos)" 
+                                className="w-full p-3 border rounded-lg text-center text-xl outline-pink-500" 
+                                value={cpf} 
+                                onChange={e => setCpf(e.target.value)} 
+                                autoFocus
+                            />
+                            <input 
+                                type="tel" 
+                                placeholder="Nascimento (DDMMAAAA)" 
+                                className="w-full p-3 border rounded-lg text-center text-xl outline-pink-500" 
+                                value={dob} 
+                                onChange={e => setDob(e.target.value)} 
+                                maxLength="10"
+                            />
+                            <Button type="submit" className="w-full py-4 text-lg" disabled={loading}>
+                                {loading ? 'Conectando...' : 'Entrar / Criar Conta'}
+                            </Button>
+                        </form>
+                        <p className="text-xs text-gray-400">Seus dados serão criados automaticamente no primeiro acesso.</p>
+                    </Card>
+                </div>
+            );
+        };
+
+        // --- APP PRINCIPAL ---
+        function GestaGlicApp() {
+            const [userId, setUserId] = useState(null);
+            const [logs, setLogs] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [showAddModal, setShowAddModal] = useState(false);
+            const [newValue, setNewValue] = useState('');
+            const [newMomento, setNewMomento] = useState('jejum');
+            const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
+
+            // Recupera sessão se o usuário der F5
+            useEffect(() => {
+                const savedId = localStorage.getItem('gestaglic_user_id');
+                if (savedId) { setUserId(savedId); fetchLogs(savedId); }
+            }, []);
+
+            const handleLogin = async (cpf, dob) => {
+                setLoading(true);
+                try {
+                    const data = await apiCall({
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'login', cpf, dob })
+                    });
+                    
+                    if (data.user_id) {
+                        setUserId(data.user_id);
+                        localStorage.setItem('gestaglic_user_id', data.user_id);
+                        fetchLogs(data.user_id);
+                    }
+                } catch (e) { 
+                    alert(e.message); 
+                } finally { 
+                    setLoading(false); 
+                }
+            };
+
+            const fetchLogs = async (id) => {
+                try {
+                    const data = await apiCall({ 
+                        method: 'GET', 
+                        headers: { 'x-user-id': id || userId } 
+                    });
+                    if (Array.isArray(data)) setLogs(data);
+                } catch (e) { console.error(e); }
+            };
+
+            const handleAddLog = async (e) => {
+                e.preventDefault();
+                if (!newValue) return;
+                
+                const logData = { 
+                    date: newDate, 
+                    value: parseInt(newValue), 
+                    momento: newMomento, 
+                    status: checkTarget(parseInt(newValue), newMomento) 
+                };
+                
+                // Atualização visual instantânea (Otimista)
+                setLogs(prev => [{...logData, id: Date.now()}, ...prev]);
+                setShowAddModal(false); 
+                setNewValue('');
+
+                try {
+                    await apiCall({
+                        method: 'POST',
+                        headers: { 'x-user-id': userId, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(logData)
+                    });
+                    // Sincroniza para garantir que temos o ID real do banco
+                    fetchLogs(userId);
+                } catch (e) { 
+                    alert("Erro ao salvar: " + e.message); 
+                }
+            };
+
+            const handleDelete = async (id) => {
+                if(!confirm("Deseja apagar este registro?")) return;
+                // Remove visualmente na hora
+                setLogs(logs.filter(l => l.id !== id));
+                
+                try {
+                    await apiCall({
+                        method: 'DELETE',
+                        headers: { 'x-user-id': userId },
+                        body: JSON.stringify({ id })
+                    });
+                } catch(e) { 
+                    alert("Erro ao deletar: " + e.message); 
+                }
+            };
+
+            const handleLogout = () => { 
+                localStorage.removeItem('gestaglic_user_id'); 
+                setUserId(null); 
+                setLogs([]); 
+            };
+
+            const avg = logs.length > 0 ? Math.round(logs.reduce((acc, curr) => acc + curr.value, 0) / logs.length) : 0;
+
+            if (!userId) return <LoginScreen onLogin={handleLogin} loading={loading} />;
+
+            return (
+                <div className="min-h-screen bg-pink-50 font-sans text-slate-800 pb-24">
+                    <header className="bg-white shadow-sm border-b border-pink-100 sticky top-0 z-30">
+                        <div className="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <div className="bg-pink-500 p-2 rounded-lg"><Activity className="text-white w-5 h-5" /></div>
+                                <h1 className="text-lg font-bold">Meu Diário</h1>
+                            </div>
+                            <button onClick={handleLogout} className="text-pink-600"><LogOut className="w-5 h-5"/></button>
+                        </div>
+                    </header>
+
+                    <main className="max-w-md mx-auto px-4 py-6 space-y-6">
+                        <div className="grid grid-cols-2 gap-3">
+                            <Card className="p-4 bg-pink-500 text-white">
+                                <p className="text-pink-100 text-xs">Média Geral</p>
+                                <h2 className="text-3xl font-bold">{avg}</h2>
+                                <span className="text-xs opacity-70">mg/dL</span>
+                            </Card>
+                            <Card className="p-4">
+                                <button onClick={() => setShowAddModal(true)} className="w-full h-full flex flex-col items-center justify-center text-pink-600 font-bold">
+                                    <span className="text-3xl leading-none">+</span>
+                                    <span>Adicionar</span>
+                                </button>
+                            </Card>
+                        </div>
+
+                        <div className="space-y-3">
+                            <h3 className="font-bold text-slate-700">Histórico</h3>
+                            {logs.length === 0 && <p className="text-gray-400 text-center py-4">Sem registros ainda.</p>}
+                            {logs.map(log => (
+                                <Card key={log.id} className="p-3 flex justify-between items-center animate-in slide-in-from-bottom-2">
+                                    <div className="flex gap-3 items-center">
+                                        <div className={`w-2 h-10 rounded-full ${log.status === 'success' ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                                        <div>
+                                            <p className="font-bold text-lg">{log.value} <span className="text-xs font-normal text-gray-400">mg/dL</span></p>
+                                            <p className="text-xs text-gray-500">{formatDate(log.date)} • {MOMENTOS.find(m=>m.id===log.momento)?.label}</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => handleDelete(log.id)} className="text-gray-300 hover:text-red-500 p-2"><Trash2 className="w-5 h-5"/></button>
+                                </Card>
+                            ))}
+                        </div>
+                    </main>
+
+                    {showAddModal && (
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-sm p-6">
+                                <h3 className="text-lg font-bold mb-4">Nova Medida</h3>
+                                <form onSubmit={handleAddLog} className="space-y-4">
+                                    <input type="date" value={newDate} onChange={e=>setNewDate(e.target.value)} className="w-full p-2 border rounded-lg" required />
+                                    <select value={newMomento} onChange={e=>setNewMomento(e.target.value)} className="w-full p-2 border rounded-lg bg-white">
+                                        {MOMENTOS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                                    </select>
+                                    <input type="number" value={newValue} onChange={e=>setNewValue(e.target.value)} className="w-full p-3 border rounded-lg text-2xl text-center" placeholder="000" required autoFocus />
+                                    <div className="flex gap-3">
+                                        <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 bg-gray-100 rounded-lg">Cancelar</button>
+                                        <button type="submit" className="flex-1 py-3 bg-pink-500 text-white rounded-lg">Salvar</button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<GestaGlicApp />);
+    </script>
+</body>
+</html>
