@@ -200,61 +200,69 @@
             const [focusedMoment, setFocusedMoment] = useState(null);
             useEffect(() => setActivePoint(null), [logs]);
 
-            // --- AQUI ESTÁ A CORREÇÃO MÁGICA DA ORDEM ---
+            // Lógica de Ordenação
             const getMomentoOrder = (mId) => MOMENTOS.findIndex(m => m.id === mId);
-
             let data = [...logs];
             data.sort((a, b) => {
                 const dateA = new Date(a.date);
                 const dateB = new Date(b.date);
                 if (dateA - dateB !== 0) return dateA - dateB;
-                // Se for o mesmo dia, usa a ordem lógica (Jejum < Cafe < Almoco)
                 return getMomentoOrder(a.momento) - getMomentoOrder(b.momento);
             });
-            // ----------------------------------------------
 
             if (logs.length === 0) return <div className="text-center py-8 text-sm text-slate-400">Sem dados para este período</div>;
 
+            // --- CORREÇÃO DO EIXO X ---
+            // Agora o eixo X é baseado nas DATAS ÚNICAS, não nos pontos
+            const uniqueDates = [...new Set(data.map(d => d.date))];
+            
             const width = 100, height = 80, padding = 10;
             const maxVal = Math.max(...data.map(d => d.value), 160);
             const minVal = Math.min(...data.map(d => d.value), 60);
             const rangeY = maxVal - minVal || 1;
-            const rangeX = data.length - 1 || 1;
+            const rangeX = uniqueDates.length - 1 || 1; 
 
-            const getX = (index) => padding + (index / rangeX) * (width - 2 * padding);
+            // Esta função agora converte a DATA para posição X
+            const getX = (dateStr) => {
+                const idx = uniqueDates.indexOf(dateStr);
+                return padding + (idx / rangeX) * (width - 2 * padding);
+            };
+            
             const getY = (val) => height - padding - ((val - minVal) / rangeY) * (height - 2 * padding);
             const momentosPresentes = [...new Set(data.map(d => d.momento))];
 
             const handleLegendClick = (mId) => setFocusedMoment(focusedMoment === mId ? null : mId);
+            const handleBgClick = () => { setFocusedMoment(null); setActivePoint(null); };
 
             return (
                 <div className="relative w-full">
                     {activePoint && (
-                        <div className="absolute z-10 bg-slate-800 text-white text-xs p-2 rounded-lg shadow-xl animate-in fade-in zoom-in duration-150 transform -translate-x-1/2 -translate-y-full" style={{ left: `${(getX(data.findIndex(d => d.id === activePoint.id)) / width) * 100}%`, top: `${(getY(activePoint.value) / height) * 100}%`, marginTop: '-12px' }}>
+                        <div className="absolute z-10 bg-slate-800 text-white text-xs p-2 rounded-lg shadow-xl animate-in fade-in zoom-in duration-150 transform -translate-x-1/2 -translate-y-full" style={{ left: `${(getX(activePoint.date) / width) * 100}%`, top: `${(getY(activePoint.value) / height) * 100}%`, marginTop: '-12px' }}>
                             <div className="font-bold text-sm text-center mb-1">{activePoint.value} <span className="font-normal text-[10px]">mg/dL</span></div>
                             <div className="opacity-80 whitespace-nowrap mb-2 text-[10px] text-center">{formatDate(activePoint.date)} • {MOMENTOS.find(m => m.id === activePoint.momento)?.short}</div>
                             <button onClick={(e) => { e.stopPropagation(); onDelete(activePoint); setActivePoint(null); }} className="w-full bg-red-600 hover:bg-red-500 text-white text-[10px] py-1 px-2 rounded flex items-center justify-center gap-1"><Trash2 className="w-3 h-3" /> Excluir</button>
                             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-slate-800"></div>
                         </div>
                     )}
-                    <div className="overflow-hidden" onClick={() => { setFocusedMoment(null); setActivePoint(null); }}>
+                    <div className="overflow-hidden" onClick={handleBgClick}>
                         <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible touch-none">
                             {[0, 0.25, 0.5, 0.75, 1].map(p => <line key={p} x1={padding} y1={padding+p*(height-2*padding)} x2={width-padding} y2={padding+p*(height-2*padding)} stroke="#f1f5f9" strokeWidth="0.5" />)}
                             {momentosPresentes.map(mId => {
                                 const mConfig = MOMENTOS.find(m => m.id === mId);
-                                const points = data.map((d, i) => ({ ...d, originalIndex: i })).filter(d => d.momento === mId).map(d => `${getX(d.originalIndex)},${getY(d.value)}`).join(' ');
+                                const points = data.filter(d => d.momento === mId).map(d => `${getX(d.date)},${getY(d.value)}`).join(' ');
                                 if(!points) return null;
                                 const isDimmed = focusedMoment && focusedMoment !== mId;
-                                return <g key={mId} style={{ opacity: isDimmed ? 0.1 : 1, transition: 'opacity 0.3s' }}><polyline points={points} fill="none" stroke={mConfig.color} strokeWidth="0.6" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={getDashArray(mConfig.line)} opacity="0.9" /></g>;
+                                return <g key={mId} style={{ opacity: isDimmed ? 0.1 : 1, transition: 'opacity 0.3s' }}><polyline points={points} fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" /><polyline points={points} fill="none" stroke={mConfig.color} strokeWidth="0.6" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={getDashArray(mConfig.line)} opacity="0.9" /></g>;
                             })}
-                            {data.map((d, i) => {
-                                const x = getX(i); const y = getY(d.value);
+                            {data.map((d) => {
+                                const x = getX(d.date); const y = getY(d.value);
                                 const isActive = activePoint && activePoint.id === d.id;
                                 const mConfig = MOMENTOS.find(m => m.id === d.momento);
                                 const isDimmed = focusedMoment && focusedMoment !== d.momento;
                                 return <g key={d.id} onClick={(e) => { e.stopPropagation(); setActivePoint(d); }} className="cursor-pointer" style={{ opacity: isDimmed ? 0.1 : 1, transition: 'opacity 0.3s' }}><circle cx={x} cy={y} r="5" fill="transparent" />{renderShape(mConfig.shape, x, y, isActive ? 3 : 2, 'white', 'white')}{renderShape(mConfig.shape, x, y, isActive ? 2.5 : 1.6, 'white', d.status === 'warning' ? '#ef4444' : '#22c55e')}</g>;
                             })}
                         </svg>
+                        <div className="flex justify-between text-[8px] text-gray-400 mt-1 px-2 select-none"><span>{formatDate(uniqueDates[0])}</span>{uniqueDates.length > 1 && <span>{formatDate(uniqueDates[uniqueDates.length - 1])}</span>}</div>
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-2 mt-4 px-2 justify-center">
                         {momentosPresentes.map(mId => {
