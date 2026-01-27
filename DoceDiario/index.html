@@ -52,7 +52,6 @@
         // --- 2. UTILITÁRIOS ---
         const formatDate = (dateString) => {
             if (!dateString) return '--/--';
-            // Garante que pega apenas a parte da data YYYY-MM-DD mesmo se vier timestamp completo
             const cleanDate = dateString.split('T')[0]; 
             const parts = cleanDate.split('-'); 
             return parts.length === 3 ? `${parts[2]}/${parts[1]}` : '--/--';
@@ -134,6 +133,8 @@
                 </Card>
             );
         };
+
+        // --- 4. COMPONENTES VISUAIS COMPLEXOS ---
 
         const PivotTable = ({ logs, onDelete }) => {
             const groupedData = useMemo(() => {
@@ -286,11 +287,73 @@
             return <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"><div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl scale-100 animate-in zoom-in-95 duration-200"><div className="text-center mb-4"><div className="bg-yellow-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"><RefreshCw className="w-6 h-6 text-yellow-600" /></div><h3 className="text-lg font-bold text-slate-800">Substituir Registro?</h3><p className="text-slate-500 text-sm mt-1">Já existe uma medida de <b>{MOMENTOS.find(m => m.id === oldItem.momento)?.label}</b> no dia <b>{formatDate(oldItem.date)}</b>.</p><div className="bg-slate-50 p-2 rounded mt-3 text-sm flex justify-center gap-4 border border-slate-100"><div><span className="block text-xs text-slate-400">Atual</span><span className="font-bold text-slate-600">{oldItem.value}</span></div><div className="flex items-center text-slate-300">→</div><div><span className="block text-xs text-pink-500 font-bold">Novo</span><span className="font-bold text-slate-800">{newValue}</span></div></div></div><div className="flex gap-3"><button onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-slate-600 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button><button onClick={onConfirm} className="flex-1 py-2.5 text-sm font-bold text-white bg-pink-500 rounded-lg hover:bg-pink-600 shadow-md shadow-pink-200">Substituir</button></div></div></div>;
         };
 
+        // --- TELA DE LOGIN ATUALIZADA (COM MÁSCARA DE DATA) ---
         const LoginScreen = ({ onLogin, loading }) => {
             const [cpf, setCpf] = useState('');
             const [dob, setDob] = useState('');
-            const handleSubmit = (e) => { e.preventDefault(); if(cpf.length >= 4 && dob) onLogin({ cpf, dob }); else alert("Preencha CPF e Data"); };
-            return <div className="min-h-screen bg-pink-50 flex items-center justify-center p-4"><Card className="w-full max-w-sm p-8 shadow-xl text-center animate-in fade-in zoom-in duration-300"><div className="bg-pink-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-pink-200"><Activity className="text-white w-8 h-8" /></div><h1 className="text-2xl font-bold text-slate-800">Diário Glicêmico</h1><p className="text-slate-500 text-sm mt-1">Acesso ao Monitoramento DMG</p><form onSubmit={handleSubmit} className="space-y-5 mt-6 text-left"><div><label className="block text-sm font-medium text-slate-700 mb-1">CPF (4 primeiros dígitos)</label><input type="number" placeholder="Ex: 1234" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 outline-none text-center text-lg tracking-widest" value={cpf} onChange={e => setCpf(e.target.value.slice(0,4))} required /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Data de Nascimento</label><input type="date" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 outline-none" value={dob} onChange={e => setDob(e.target.value)} required /></div><Button type="submit" className="w-full py-4 text-lg shadow-lg" disabled={loading}>{loading ? 'Conectando...' : 'Acessar Meu Diário'}</Button></form></Card></div>;
+
+            // Função para formatar DD/MM/AAAA enquanto digita
+            const handleDateChange = (e) => {
+                let v = e.target.value.replace(/\D/g, ''); // só números
+                if (v.length > 8) v = v.slice(0, 8); // max 8 números
+                if (v.length >= 5) {
+                    v = v.replace(/^(\d{2})(\d{2})(\d{0,4})/, '$1/$2/$3');
+                } else if (v.length >= 3) {
+                    v = v.replace(/^(\d{2})(\d{0,2})/, '$1/$2');
+                }
+                setDob(v);
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if(cpf.length < 4 || dob.length < 10) return alert("Preencha CPF e Data completa (DD/MM/AAAA)");
+                
+                // Converte DD/MM/AAAA para YYYY-MM-DD para garantir compatibilidade com o banco
+                const [day, month, year] = dob.split('/');
+                const formattedDate = `${year}-${month}-${day}`;
+                
+                onLogin({ cpf, dob: formattedDate });
+            };
+
+            return (
+                <div className="min-h-screen bg-pink-50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-sm p-8 shadow-xl text-center animate-in fade-in zoom-in duration-300">
+                        <div className="bg-pink-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-pink-200">
+                            <Activity className="text-white w-8 h-8" />
+                        </div>
+                        <h1 className="text-2xl font-bold text-slate-800">Diário Glicêmico</h1>
+                        <p className="text-slate-500 text-sm mt-1">Acesso ao Monitoramento DMG</p>
+                        
+                        <form onSubmit={handleSubmit} className="space-y-5 mt-6 text-left">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">CPF (4 primeiros dígitos)</label>
+                                <input 
+                                    type="tel" 
+                                    placeholder="Ex: 1234" 
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 outline-none text-center text-lg tracking-widest" 
+                                    value={cpf} 
+                                    onChange={e => setCpf(e.target.value.slice(0,4))} 
+                                    required 
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Data de Nascimento</label>
+                                <input 
+                                    type="tel" 
+                                    placeholder="DD/MM/AAAA"
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 outline-none text-center text-lg tracking-widest" 
+                                    value={dob} 
+                                    onChange={handleDateChange} 
+                                    required 
+                                />
+                            </div>
+                            <Button type="submit" className="w-full py-4 text-lg shadow-lg" disabled={loading}>
+                                {loading ? 'Conectando...' : 'Acessar Meu Diário'}
+                            </Button>
+                        </form>
+                    </Card>
+                </div>
+            );
         };
 
         // --- APP PRINCIPAL ---
@@ -344,12 +407,10 @@
 
             const handleLogout = () => { localStorage.clear(); setUser(null); setUserId(null); setLogs([]); };
 
-            // BUSCA DADOS E CORRIGE FORMATOS AUTOMATICAMENTE
             const fetchLogs = async (id) => {
                 try {
                     const data = await apiCall({ method: 'GET', headers: { 'x-user-id': id } });
                     if (Array.isArray(data)) {
-                        // O SEGREDO: Adapta os dados do banco para o visual
                         const fixedData = data.map(item => ({
                             ...item,
                             id: item.id || item.id_registro, 
