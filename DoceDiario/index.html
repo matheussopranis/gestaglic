@@ -261,4 +261,257 @@
         const SimpleLineChart = ({ data }) => {
             if (!data || data.length === 0) return null;
             const width = 100, height = 40, padding = 2;
-            const maxVal = Math.max(...data.map(d =>
+            const maxVal = Math.max(...data.map(d => d.value));
+            const minVal = Math.min(...data.map(d => d.value));
+            const rangeY = maxVal - minVal || 1;
+            const rangeX = data.length - 1 || 1;
+            const getX = (i) => padding + (i / rangeX) * (width - 2 * padding);
+            const getY = (val) => height - padding - ((val - minVal) / rangeY) * (height - 2 * padding);
+            const points = data.map((d, i) => `${getX(i)},${getY(d.value)}`).join(' ');
+            return <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto"><polyline points={points} fill="none" stroke="#ec4899" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+        };
+
+        const FloatingViewControls = ({ currentView, onViewChange }) => {
+            const options = [{ id: 'global', label: 'G', icon: <Globe className="w-4 h-4" /> }, { id: 'semana', label: 'S', icon: <Calendar className="w-4 h-4" /> }, { id: 'dia', label: 'D', icon: <Sun className="w-4 h-4" /> }];
+            return <div className="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-2">{options.map(opt => <button key={opt.id} onClick={() => onViewChange(opt.id)} className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 ${currentView === opt.id ? 'bg-pink-600 text-white scale-110 ring-2 ring-pink-300' : 'bg-white text-slate-500 hover:bg-gray-50'}`}><span className="font-bold text-sm">{opt.label}</span></button>)}</div>;
+        };
+
+        const DeleteModal = ({ isOpen, onClose, onConfirm, item }) => {
+            if (!isOpen || !item) return null;
+            return <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"><div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl scale-100 animate-in zoom-in-95 duration-200"><div className="text-center mb-4"><div className="bg-red-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"><Trash2 className="w-6 h-6 text-red-500" /></div><h3 className="text-lg font-bold text-slate-800">Excluir Medida?</h3><p className="text-slate-500 text-sm mt-1">{formatDate(item.date)} - {MOMENTOS.find(m => m.id === item.momento)?.label}<br /><span className="font-bold text-slate-700">Valor: {item.value} mg/dL</span></p></div><div className="flex gap-3"><button onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-slate-600 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button><button onClick={onConfirm} className="flex-1 py-2.5 text-sm font-bold text-white bg-red-500 rounded-lg hover:bg-red-600 shadow-md shadow-red-200">Sim, Excluir</button></div></div></div>;
+        };
+
+        const ReplaceModal = ({ isOpen, onClose, onConfirm, oldItem, newValue }) => {
+            if (!isOpen || !oldItem) return null;
+            return <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"><div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl scale-100 animate-in zoom-in-95 duration-200"><div className="text-center mb-4"><div className="bg-yellow-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"><RefreshCw className="w-6 h-6 text-yellow-600" /></div><h3 className="text-lg font-bold text-slate-800">Substituir Registro?</h3><p className="text-slate-500 text-sm mt-1">Já existe uma medida de <b>{MOMENTOS.find(m => m.id === oldItem.momento)?.label}</b> no dia <b>{formatDate(oldItem.date)}</b>.</p><div className="bg-slate-50 p-2 rounded mt-3 text-sm flex justify-center gap-4 border border-slate-100"><div><span className="block text-xs text-slate-400">Atual</span><span className="font-bold text-slate-600">{oldItem.value}</span></div><div className="flex items-center text-slate-300">→</div><div><span className="block text-xs text-pink-500 font-bold">Novo</span><span className="font-bold text-slate-800">{newValue}</span></div></div></div><div className="flex gap-3"><button onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-slate-600 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button><button onClick={onConfirm} className="flex-1 py-2.5 text-sm font-bold text-white bg-pink-500 rounded-lg hover:bg-pink-600 shadow-md shadow-pink-200">Substituir</button></div></div></div>;
+        };
+
+        const LoginScreen = ({ onLogin, loading }) => {
+            const [cpf, setCpf] = useState('');
+            const [dob, setDob] = useState('');
+            const handleSubmit = (e) => { e.preventDefault(); if(cpf.length >= 4 && dob) onLogin({ cpf, dob }); else alert("Preencha CPF e Data"); };
+            return <div className="min-h-screen bg-pink-50 flex items-center justify-center p-4"><Card className="w-full max-w-sm p-8 shadow-xl text-center animate-in fade-in zoom-in duration-300"><div className="bg-pink-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-pink-200"><Activity className="text-white w-8 h-8" /></div><h1 className="text-2xl font-bold text-slate-800">Diário Glicêmico</h1><p className="text-slate-500 text-sm mt-1">Acesso ao Monitoramento DMG</p><form onSubmit={handleSubmit} className="space-y-5 mt-6 text-left"><div><label className="block text-sm font-medium text-slate-700 mb-1">CPF (4 primeiros dígitos)</label><input type="number" placeholder="Ex: 1234" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 outline-none text-center text-lg tracking-widest" value={cpf} onChange={e => setCpf(e.target.value.slice(0,4))} required /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Data de Nascimento</label><input type="date" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 outline-none" value={dob} onChange={e => setDob(e.target.value)} required /></div><Button type="submit" className="w-full py-4 text-lg shadow-lg" disabled={loading}>{loading ? 'Conectando...' : 'Acessar Meu Diário'}</Button></form></Card></div>;
+        };
+
+        // --- APP PRINCIPAL ---
+        function GestaGlicApp() {
+            const [user, setUser] = useState(null);
+            const [userId, setUserId] = useState(null);
+            const [logs, setLogs] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [activeTab, setActiveTab] = useState('diario');
+            const [viewPeriod, setViewPeriod] = useState('global');
+            
+            const [showAddModal, setShowAddModal] = useState(false);
+            const [newValue, setNewValue] = useState('');
+            const [newMomento, setNewMomento] = useState('jejum');
+            const [newDate, setNewDate] = useState(getLocalDate());
+            
+            const [deletingLog, setDeletingLog] = useState(null);
+            const [pendingLog, setPendingLog] = useState(null);
+            const [showReplaceModal, setShowReplaceModal] = useState(false);
+
+            const [quickInput, setQuickInput] = useState('');
+            const [quickMomento, setQuickMomento] = useState('jejum');
+            const [quickData, setQuickData] = useState([]);
+            const [quickStats, setQuickStats] = useState(null);
+
+            useEffect(() => {
+                const savedId = localStorage.getItem('gestaglic_user_id');
+                const savedInfo = localStorage.getItem('gestaglic_user_info');
+                if (savedId && savedInfo) {
+                    setUserId(savedId);
+                    setUser(JSON.parse(savedInfo));
+                    fetchLogs(savedId);
+                }
+            }, []);
+
+            const handleLogin = async (credentials) => {
+                setLoading(true);
+                try {
+                    const cleanCpf = credentials.cpf.replace(/\D/g, '');
+                    const cleanDob = credentials.dob.replace(/\D/g, '');
+                    const data = await apiCall({ method: 'POST', body: JSON.stringify({ action: 'login', cpf: cleanCpf, dob: cleanDob }) });
+                    if (data.user_id) {
+                        setUserId(data.user_id);
+                        setUser(credentials);
+                        localStorage.setItem('gestaglic_user_id', data.user_id);
+                        localStorage.setItem('gestaglic_user_info', JSON.stringify(credentials));
+                        fetchLogs(data.user_id);
+                    }
+                } catch (e) { alert("Erro no login: " + e.message); } finally { setLoading(false); }
+            };
+
+            const handleLogout = () => { localStorage.clear(); setUser(null); setUserId(null); setLogs([]); };
+
+            // BUSCA DADOS E CORRIGE FORMATOS AUTOMATICAMENTE
+            const fetchLogs = async (id) => {
+                try {
+                    const data = await apiCall({ method: 'GET', headers: { 'x-user-id': id } });
+                    if (Array.isArray(data)) {
+                        // O SEGREDO: Adapta os dados do banco para o visual
+                        const fixedData = data.map(item => ({
+                            ...item,
+                            id: item.id || item.id_registro, 
+                            date: item.date || (item.data_log ? item.data_log.split('T')[0] : getLocalDate()),
+                            value: item.value || item.valor
+                        }));
+                        setLogs(fixedData);
+                    }
+                } catch (e) { console.error(e); }
+            };
+
+            const handleAddLog = async (e) => {
+                e.preventDefault();
+                if (!newValue) return;
+                const existing = logs.find(l => l.date === newDate && l.momento === newMomento);
+                const logData = { date: newDate, value: parseInt(newValue), momento: newMomento, status: checkTarget(parseInt(newValue), newMomento) };
+                if (existing) { setPendingLog(logData); setShowReplaceModal(true); return; }
+                saveLogToDb(logData);
+            };
+
+            const saveLogToDb = async (logData) => {
+                setLogs(prev => [{...logData, id: Date.now()}, ...prev]);
+                setShowAddModal(false); setNewValue(''); setShowReplaceModal(false); setPendingLog(null);
+                try {
+                    await apiCall({ method: 'POST', headers: { 'x-user-id': userId, 'Content-Type': 'application/json' }, body: JSON.stringify(logData) });
+                    setTimeout(() => fetchLogs(userId), 500);
+                } catch (e) { alert("Erro ao salvar: " + e.message); }
+            };
+
+            const confirmDelete = async () => {
+                if (!deletingLog) return;
+                setLogs(logs.filter(l => l.id !== deletingLog.id)); setDeletingLog(null);
+                try { await apiCall({ method: 'DELETE', headers: { 'x-user-id': userId }, body: JSON.stringify({ id: deletingLog.id }) }); } catch (e) { alert("Erro ao deletar"); }
+            };
+
+            const confirmReplace = async () => {
+                if (!pendingLog) return;
+                const existing = logs.find(l => l.date === pendingLog.date && l.momento === pendingLog.momento);
+                if (existing) { try { await apiCall({ method: 'DELETE', headers: { 'x-user-id': userId }, body: JSON.stringify({ id: existing.id }) }); } catch(e) {} }
+                saveLogToDb(pendingLog);
+            };
+
+            function calculateStats(data) {
+                if (data.length === 0) return { total: 0, inTarget: 0, percent: 0, avg: 0 };
+                const inTarget = data.filter(l => l.status === 'success').length;
+                const sum = data.reduce((acc, curr) => acc + curr.value, 0);
+                return { total: data.length, inTarget, percent: Math.round((inTarget / data.length) * 100), avg: Math.round(sum / data.length) };
+            }
+
+            const filteredLogs = useMemo(() => {
+                let data = [...logs];
+                const todayStr = getLocalDate();
+                if (viewPeriod === 'semana') {
+                    const d = new Date(); d.setDate(d.getDate() - 7);
+                    const weekAgo = d.toISOString().split('T')[0];
+                    data = data.filter(l => l.date >= weekAgo);
+                } else if (viewPeriod === 'dia') {
+                    data = data.filter(l => l.date === todayStr);
+                }
+                return data;
+            }, [logs, viewPeriod]);
+
+            const globalStats = useMemo(() => calculateStats(filteredLogs), [filteredLogs]);
+            const statsByMomento = useMemo(() => {
+                const res = [];
+                MOMENTOS.forEach(m => {
+                    const f = filteredLogs.filter(l => l.momento === m.id);
+                    if (f.length > 0) res.push({ ...m, stats: calculateStats(f) });
+                });
+                return res;
+            }, [filteredLogs]);
+
+            useEffect(() => {
+                if (activeTab !== 'calculo') return;
+                const vals = quickInput.split(/[\s,]+/).map(v => parseInt(v.trim())).filter(n => !isNaN(n));
+                if (vals.length > 0) {
+                    const proc = vals.map((v, i) => ({ value: v, status: checkTarget(v, quickMomento), id: i, momento: quickMomento }));
+                    setQuickData(proc); setQuickStats(calculateStats(proc));
+                } else { setQuickStats(null); setQuickData([]); }
+            }, [quickInput, quickMomento, activeTab]);
+
+            if (!user) return <LoginScreen onLogin={handleLogin} loading={loading} />;
+
+            return (
+                <div className="min-h-screen bg-pink-50 font-sans text-slate-800 pb-24">
+                    <div className="sticky top-0 z-30 bg-white shadow-sm border-b border-pink-100">
+                        <header className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="bg-pink-500 p-2 rounded-lg">{activeTab === 'calculo' ? <Calculator className="text-white w-5 h-5"/> : <Activity className="text-white w-5 h-5" />}</div>
+                                <div><h1 className="text-lg font-bold text-slate-800 leading-tight">{activeTab === 'calculo' ? 'Cálculo Rápido' : 'Diário'}</h1><p className="text-[10px] text-slate-500 font-medium">Olá, Mamãe (CPF: ...{user.cpf})</p></div>
+                            </div>
+                            <button onClick={handleLogout} className="text-pink-600 p-2 hover:bg-pink-50 rounded-full"><LogOut className="w-5 h-5" /></button>
+                        </header>
+                    </div>
+
+                    {activeTab === 'diario' && <FloatingViewControls currentView={viewPeriod} onViewChange={setViewPeriod} />}
+                    <DeleteModal isOpen={!!deletingLog} onClose={() => setDeletingLog(null)} onConfirm={confirmDelete} item={deletingLog} />
+                    <ReplaceModal isOpen={showReplaceModal} onClose={() => { setShowReplaceModal(false); setPendingLog(null); }} onConfirm={confirmReplace} oldItem={pendingLog && logs.find(l => l.date === pendingLog.date && l.momento === pendingLog.momento)} newValue={pendingLog?.value} />
+
+                    <main className="max-w-md mx-auto px-4 py-6 space-y-6">
+                        {activeTab === 'diario' && (
+                        <>
+                            <div className="grid grid-cols-2 gap-3">
+                                <Card className="p-4 bg-gradient-to-br from-pink-500 to-rose-400 text-white relative flex flex-col h-full">
+                                    <div className="flex justify-between items-start"><p className="text-pink-100 text-xs font-medium mb-1">Média</p><span className="text-[10px] bg-white/20 px-1.5 rounded uppercase">{viewPeriod === 'global' ? 'Geral' : viewPeriod}</span></div>
+                                    <h2 className="text-3xl font-bold">{globalStats.avg || '--'}</h2>
+                                    <span className="text-xs text-pink-100 opacity-80">mg/dL</span>
+                                    {statsByMomento.length > 0 && <div className="mt-2 pt-2 border-t border-white/20 space-y-1">{statsByMomento.map(i => <div key={i.id} className="flex justify-between text-[10px]"><span className="text-pink-50">{i.label}</span><span className="font-bold">{i.stats.avg}</span></div>)}</div>}
+                                </Card>
+                                <Card className="p-4 flex flex-col h-full">
+                                    <p className="text-slate-500 text-xs font-medium mb-1">Na Meta</p>
+                                    <h2 className={`text-3xl font-bold ${globalStats.percent < 70 ? 'text-red-500' : 'text-green-600'}`}>{globalStats.percent}%</h2>
+                                    <div className="w-full bg-gray-200 rounded-full h-1 mt-1"><div className={`h-1 rounded-full ${globalStats.percent < 70 ? 'bg-red-500' : 'bg-green-500'}`} style={{ width: `${globalStats.percent}%` }}></div></div>
+                                    {statsByMomento.length > 0 && <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">{statsByMomento.map(i => <div key={i.id} className="flex justify-between text-[10px]"><span className="text-slate-500 truncate w-12">{i.label}</span><span className={`font-bold ${i.stats.percent < 70 ? 'text-red-500' : 'text-green-600'}`}>{i.stats.percent}%</span></div>)}</div>}
+                                </Card>
+                            </div>
+                            <Button onClick={() => setShowAddModal(true)} className="w-full shadow-lg shadow-pink-200/50"><PlusCircle className="w-5 h-5" /> Nova Medida</Button>
+                            {showAddModal && (
+                                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                                    <Card className="w-full max-w-sm p-6 animate-in fade-in zoom-in duration-200">
+                                        <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold">Registrar Glicemia</h3><button onClick={() => setShowAddModal(false)}><X className="w-5 h-5 text-gray-400"/></button></div>
+                                        <form onSubmit={handleAddLog} className="space-y-4">
+                                            <div><label className="block text-sm text-slate-600 mb-1">Data</label><input type="date" required className="w-full p-2 border rounded-lg" value={newDate} onChange={e=>setNewDate(e.target.value)} /></div>
+                                            <div><label className="block text-sm text-slate-600 mb-1">Momento</label><select className="w-full p-2 border rounded-lg" value={newMomento} onChange={e=>setNewMomento(e.target.value)}>{MOMENTOS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}</select><p className="text-xs text-slate-500 mt-1">Meta: {'<'} {MOMENTOS.find(m => m.id === newMomento)?.target} mg/dL</p></div>
+                                            <div><label className="block text-sm text-slate-600 mb-1">Valor (mg/dL)</label><input type="number" required placeholder="Ex: 98" className="w-full p-2 border rounded-lg text-lg font-semibold text-center" value={newValue} onChange={e=>setNewValue(e.target.value)} /></div>
+                                            <div className="flex gap-2 pt-2"><Button variant="ghost" className="flex-1" onClick={() => setShowAddModal(false)}>Cancelar</Button><Button type="submit" className="flex-1">Salvar</Button></div>
+                                        </form>
+                                    </Card>
+                                </div>
+                            )}
+                            <Card className="p-4"><div className="flex items-center justify-between mb-4"><h3 className="font-bold text-slate-700 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-pink-500" /> Evolução</h3></div><MultiLineChart logs={filteredLogs} onDelete={setDeletingLog} /></Card>
+                            <div className="space-y-3"><h3 className="font-bold text-slate-700 flex items-center gap-2"><ListIcon className="w-4 h-4 text-pink-500" /> Tabela de Registros</h3><PivotTable logs={filteredLogs} onDelete={setDeletingLog} /></div>
+                        </>
+                        )}
+                        {activeTab === 'calculo' && (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                <Card className="p-5"><h2 className="text-lg font-bold text-slate-800 mb-2">Simulador Rápido</h2><p className="text-sm text-slate-500 mb-4">Insira múltiplos valores para calcular a média instantânea.</p><div className="space-y-4"><select className="w-full p-2 border rounded-lg" value={quickMomento} onChange={e => setQuickMomento(e.target.value)}>{MOMENTOS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}</select><textarea rows="3" className="w-full p-3 border rounded-lg font-mono" placeholder="Ex: 92 98 105" value={quickInput} onChange={e => setQuickInput(e.target.value)} /></div></Card>
+                                {quickStats && <><div className="grid grid-cols-2 gap-3"><Card className="p-4 bg-gradient-to-br from-pink-500 to-rose-400 text-white"><p className="text-pink-100 text-xs font-medium mb-1">Média Calculada</p><h2 className="text-3xl font-bold">{quickStats.avg}</h2><span className="text-xs text-pink-100 opacity-80">mg/dL ({quickStats.total} medidas)</span></Card><Card className="p-4"><p className="text-slate-500 text-xs font-medium mb-1">Na Meta</p><h2 className={`text-3xl font-bold ${quickStats.percent < 70 ? 'text-red-500' : 'text-green-600'}`}>{quickStats.percent}%</h2><div className="w-full bg-gray-200 rounded-full h-1 mt-2"><div className={`h-1 rounded-full ${quickStats.percent < 70 ? 'bg-red-500' : 'bg-green-500'}`} style={{ width: `${quickStats.percent}%` }}></div></div></Card></div><Card className="p-4"><div className="flex items-center justify-between mb-4"><h3 className="font-bold text-slate-700 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-pink-500" /> Tendência da Simulação</h3></div><SimpleLineChart data={quickData} /></Card></>}
+                            </div>
+                        )}
+                        {activeTab === 'educacao' && (
+                            <div className="space-y-4"><h2 className="text-xl font-bold text-slate-800">Nutrição Saudável</h2><p className="text-sm text-slate-600">Recomendações baseadas no Guia Alimentar para a População Brasileira.</p><InfoCard title="Fracionamento das Refeições" icon={<Utensils className="w-5 h-5 text-pink-500"/>} content="Comer pequenas porções várias vezes ao dia (5 a 6 refeições) ajuda a manter a glicemia estável e evita picos de fome." /><InfoCard title="Prefira Integrais" icon={<CheckCircle className="w-5 h-5 text-green-500"/>} content="Arroz integral, aveia e pães integrais possuem mais fibras. As fibras diminuem a velocidade com que o açúcar entra no sangue." /><div className="bg-blue-50 p-4 rounded-xl border border-blue-100"><h3 className="font-bold text-blue-800 mb-2">Modelo do Prato Saudável</h3><ul className="text-sm text-blue-700 space-y-1 list-disc pl-4"><li>50% Salada (Vegetais crus e cozidos)</li><li>25% Proteína (Carne magra, frango, peixe, ovo)</li><li>25% Carboidrato (Arroz integral, batata, mandioca)</li></ul></div></div>
+                        )}
+                        {activeTab === 'exercicios' && (
+                            <div className="space-y-4"><h2 className="text-xl font-bold text-slate-800">Atividade Física</h2><p className="text-sm text-slate-600">O exercício funciona como 'insulina natural', ajudando a baixar a glicemia.</p><Card className="p-4 border-l-4 border-l-green-500"><h3 className="font-bold text-lg mb-2">A Meta de Ouro</h3><p className="text-slate-600 mb-2">150 minutos por semana de atividade leve a moderada.</p></Card><InfoCard title="Benefícios na Gestação" icon={<Heart className="w-5 h-5 text-red-500"/>} content="Melhora a circulação, reduz inchaço, controla o peso, melhora o humor e prepara o corpo para o parto." /><InfoCard title="Sinais de Alerta (Pare!)" icon={<AlertCircle className="w-5 h-5 text-red-500"/>} content="Pare o exercício imediatamente se sentir: tontura, falta de ar excessiva, dor no peito, contrações uterinas ou sangramento." /></div>
+                        )}
+                    </main>
+
+                    <nav className="fixed bottom-0 w-full bg-white border-t border-gray-100 pb-safe z-50">
+                        <div className="max-w-md mx-auto flex justify-around p-2">
+                            <NavButton active={activeTab === 'diario'} onClick={() => setActiveTab('diario')} icon={<Activity />} label="Diário" />
+                            <NavButton active={activeTab === 'calculo'} onClick={() => setActiveTab('calculo')} icon={<Calculator />} label="Cálculo" />
+                            <NavButton active={activeTab === 'educacao'} onClick={() => setActiveTab('educacao')} icon={<Utensils />} label="Nutrição" />
+                            <NavButton active={activeTab === 'exercicios'} onClick={() => setActiveTab('exercicios')} icon={<Heart />} label="Atividade" />
+                        </div>
+                    </nav>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<GestaGlicApp />);
+    </script>
+</body>
+</html>
