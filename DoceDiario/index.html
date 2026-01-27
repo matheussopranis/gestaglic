@@ -26,7 +26,7 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
 
-        // --- 1. COMUNICAÇÃO COM O BANCO (BACKEND) ---
+        // --- 1. COMUNICAÇÃO ROBUSTA COM O BANCO ---
         async function apiCall(options = {}) {
             const url = '/.netlify/functions/api';
             try {
@@ -52,8 +52,10 @@
         // --- 2. UTILITÁRIOS ---
         const formatDate = (dateString) => {
             if (!dateString) return '--/--';
-            const parts = dateString.split('-'); 
-            return `${parts[2]}/${parts[1]}`;
+            // Garante que pega apenas a parte da data YYYY-MM-DD mesmo se vier timestamp completo
+            const cleanDate = dateString.split('T')[0]; 
+            const parts = cleanDate.split('-'); 
+            return parts.length === 3 ? `${parts[2]}/${parts[1]}` : '--/--';
         };
 
         const getLocalDate = () => {
@@ -78,31 +80,22 @@
         const ChevronDown = (p) => <Icon {...p} path={<polyline points="6 9 12 15 18 9"/>} />;
         const ChevronUp = (p) => <Icon {...p} path={<polyline points="18 15 12 9 6 15"/>} />;
         const ListIcon = (p) => <Icon {...p} path={<><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></>} />;
-        const Filter = (p) => <Icon {...p} path={<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />} />;
-        const X = (p) => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>} />;
         const Calendar = (p) => <Icon {...p} path={<><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></>} />;
         const Sun = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></>} />;
         const Globe = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></>} />;
         const RefreshCw = (p) => <Icon {...p} path={<><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></>} />;
         const Calculator = (p) => <Icon {...p} path={<><rect x="4" y="2" width="16" height="20" rx="2" /><line x1="8" y1="6" x2="16" y2="6" /><line x1="16" y1="14" x2="16" y2="18" /><path d="M16 10h.01" /><path d="M12 10h.01" /><path d="M8 10h.01" /><path d="M12 14h.01" /><path d="M8 14h.01" /><path d="M12 18h.01" /><path d="M8 18h.01" /></>} />;
         const LogOut = (p) => <Icon {...p} path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></>} />;
+        const X = (p) => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>} />;
 
-        // --- COMPONENTES UI BÁSICOS ---
+        // --- COMPONENTES UI ---
         const Card = ({ children, className = "" }) => <div className={`bg-white rounded-xl shadow-sm border border-pink-100 overflow-hidden ${className}`}>{children}</div>;
-        
         const Button = ({ children, onClick, variant = "primary", className = "", type = "button" }) => {
             const baseStyle = "px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-95";
-            const variants = {
-                primary: "bg-pink-500 hover:bg-pink-600 text-white shadow-md shadow-pink-200",
-                outline: "border-2 border-pink-500 text-pink-600 hover:bg-pink-50",
-                ghost: "text-gray-500 hover:bg-gray-100",
-                danger: "text-red-500 hover:bg-red-50",
-                sm: "px-3 py-1 text-sm bg-pink-100 text-pink-700 hover:bg-pink-200"
-            };
+            const variants = { primary: "bg-pink-500 hover:bg-pink-600 text-white shadow-md shadow-pink-200", outline: "border-2 border-pink-500 text-pink-600 hover:bg-pink-50", ghost: "text-gray-500 hover:bg-gray-100", danger: "text-red-500 hover:bg-red-50", sm: "px-3 py-1 text-sm bg-pink-100 text-pink-700 hover:bg-pink-200" };
             return <button type={type} onClick={onClick} className={`${baseStyle} ${variants[variant]} ${className}`}>{children}</button>;
         };
 
-        // --- LÓGICA DE NEGÓCIO ---
         const TARGETS = { jejum: 95, pos1h: 140, pos2h: 120, pre: 95 };
         const MOMENTOS = [
             { id: 'jejum', label: 'Jejum', short: 'Jejum', target: TARGETS.jejum, color: '#2563eb', shape: 'triangle', line: 'solid' }, 
@@ -122,7 +115,6 @@
             return (!momento || value < momento.target) ? 'success' : 'warning';
         };
 
-        // --- SUB-COMPONENTES VISUAIS ---
         const NavButton = ({ active, onClick, icon, label }) => (
             <button onClick={onClick} className={`flex flex-col items-center p-2 rounded-lg w-full transition-colors ${active ? 'text-pink-600 bg-pink-50' : 'text-gray-400 hover:text-gray-600'}`}>
                 {React.cloneElement(icon, { className: "w-6 h-6 mb-1" })}
@@ -143,8 +135,6 @@
             );
         };
 
-        // --- 4. COMPONENTES VISUAIS COMPLEXOS (RESTAURADOS DO ORIGINAL) ---
-
         const PivotTable = ({ logs, onDelete }) => {
             const groupedData = useMemo(() => {
                 const groups = {};
@@ -160,9 +150,7 @@
                 return MOMENTOS.filter(m => presentIds.has(m.id));
             }, [logs]);
 
-            if (logs.length === 0) {
-                return <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-300"><p className="text-slate-400">Nenhum registro neste período.</p></div>;
-            }
+            if (logs.length === 0) return <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-300"><p className="text-slate-400">Nenhum registro neste período.</p></div>;
 
             return (
                 <div className="bg-white rounded-xl shadow-sm border border-pink-100 overflow-hidden">
@@ -171,35 +159,19 @@
                             <thead className="bg-pink-50 text-pink-800 font-medium">
                                 <tr>
                                     <th className="px-3 py-3 sticky left-0 bg-pink-50 z-10 border-r border-pink-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Data</th>
-                                    {activeMomentos.map(m => (
-                                        <th key={m.id} className="px-3 py-3 text-center min-w-[70px] align-bottom">
-                                            <div className="flex flex-col items-center justify-end h-full">
-                                                <span className="whitespace-nowrap text-[10px] block text-center px-1">{m.label}</span>
-                                            </div>
-                                        </th>
-                                    ))}
+                                    {activeMomentos.map(m => <th key={m.id} className="px-3 py-3 text-center min-w-[70px] align-bottom"><div className="flex flex-col items-center justify-end h-full"><span className="whitespace-nowrap text-[10px] block text-center px-1">{m.label}</span></div></th>)}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {groupedData.map(([date, dayLogs]) => (
                                     <tr key={date} className="hover:bg-gray-50">
-                                        <td className="px-3 py-3 text-slate-600 font-medium sticky left-0 bg-white border-r border-gray-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                                            {formatDate(date)}
-                                        </td>
+                                        <td className="px-3 py-3 text-slate-600 font-medium sticky left-0 bg-white border-r border-gray-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">{formatDate(date)}</td>
                                         {activeMomentos.map(m => {
                                             const log = dayLogs[m.id];
                                             return (
                                                 <td key={m.id} className="px-2 py-3 text-center">
                                                     {log ? (
-                                                        <button 
-                                                            onClick={() => onDelete(log)}
-                                                            className={`px-2 py-0.5 rounded-full font-bold border transition-transform active:scale-95 ${
-                                                            log.status === 'success' 
-                                                                ? 'bg-green-50 text-green-700 border-green-200' 
-                                                                : 'bg-red-50 text-red-700 border-red-200'
-                                                        }`}>
-                                                            {log.value}
-                                                        </button>
+                                                        <button onClick={() => onDelete(log)} className={`px-2 py-0.5 rounded-full font-bold border transition-transform active:scale-95 ${log.status === 'success' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>{log.value}</button>
                                                     ) : <span className="text-gray-200">-</span>}
                                                 </td>
                                             );
@@ -215,38 +187,24 @@
 
         const renderShape = (shape, x, y, size, color, fill) => {
             const s = size; 
-            if (shape === 'triangle') {
-                return <polygon points={`${x},${y-s} ${x-s},${y+s} ${x+s},${y+s}`} fill={fill} stroke={color} strokeWidth="0.5" />;
-            } else if (shape === 'square') {
-                return <rect x={x-s} y={y-s} width={s*2} height={s*2} fill={fill} stroke={color} strokeWidth="0.5" />;
-            } else {
-                return <circle cx={x} cy={y} r={s} fill={fill} stroke={color} strokeWidth="0.5" />;
-            }
+            if (shape === 'triangle') return <polygon points={`${x},${y-s} ${x-s},${y+s} ${x+s},${y+s}`} fill={fill} stroke={color} strokeWidth="0.5" />;
+            if (shape === 'square') return <rect x={x-s} y={y-s} width={s*2} height={s*2} fill={fill} stroke={color} strokeWidth="0.5" />;
+            return <circle cx={x} cy={y} r={s} fill={fill} stroke={color} strokeWidth="0.5" />;
         };
 
-        const getDashArray = (lineType) => {
-            if (lineType === 'dashed') return "1.5, 1.5";
-            if (lineType === 'dotted') return "0.5, 1.5";
-            return "0";
-        };
+        const getDashArray = (lineType) => lineType === 'dashed' ? "1.5, 1.5" : lineType === 'dotted' ? "0.5, 1.5" : "0";
 
         const MultiLineChart = ({ logs, onDelete }) => {
             const [activePoint, setActivePoint] = useState(null);
             const [focusedMoment, setFocusedMoment] = useState(null);
-            
             useEffect(() => setActivePoint(null), [logs]);
 
             let data = [...logs];
             data.sort((a, b) => new Date(a.date) - new Date(b.date) || a.id - b.id);
 
-            if (logs.length === 0) {
-                return <div className="text-center py-8 text-sm text-slate-400">Sem dados para este período</div>;
-            }
+            if (logs.length === 0) return <div className="text-center py-8 text-sm text-slate-400">Sem dados para este período</div>;
 
-            const width = 100;
-            const height = 80;
-            const padding = 10;
-            
+            const width = 100, height = 80, padding = 10;
             const maxVal = Math.max(...data.map(d => d.value), 160);
             const minVal = Math.min(...data.map(d => d.value), 60);
             const rangeY = maxVal - minVal || 1;
@@ -254,111 +212,46 @@
 
             const getX = (index) => padding + (index / rangeX) * (width - 2 * padding);
             const getY = (val) => height - padding - ((val - minVal) / rangeY) * (height - 2 * padding);
-
             const momentosPresentes = [...new Set(data.map(d => d.momento))];
 
-            const handleLegendClick = (mId) => {
-                if (focusedMoment === mId) {
-                    setFocusedMoment(null);
-                } else {
-                    setFocusedMoment(mId);
-                }
-            };
-
-            const handleBgClick = () => {
-                setFocusedMoment(null);
-                setActivePoint(null);
-            }
+            const handleLegendClick = (mId) => setFocusedMoment(focusedMoment === mId ? null : mId);
 
             return (
                 <div className="relative w-full">
                     {activePoint && (
-                        <div className="absolute z-10 bg-slate-800 text-white text-xs p-2 rounded-lg shadow-xl animate-in fade-in zoom-in duration-150 transform -translate-x-1/2 -translate-y-full"
-                            style={{ 
-                                left: `${(getX(data.findIndex(d => d.id === activePoint.id)) / width) * 100}%`,
-                                top: `${(getY(activePoint.value) / height) * 100}%`,
-                                marginTop: '-12px'
-                            }}
-                        >
+                        <div className="absolute z-10 bg-slate-800 text-white text-xs p-2 rounded-lg shadow-xl animate-in fade-in zoom-in duration-150 transform -translate-x-1/2 -translate-y-full" style={{ left: `${(getX(data.findIndex(d => d.id === activePoint.id)) / width) * 100}%`, top: `${(getY(activePoint.value) / height) * 100}%`, marginTop: '-12px' }}>
                             <div className="font-bold text-sm text-center mb-1">{activePoint.value} <span className="font-normal text-[10px]">mg/dL</span></div>
-                            <div className="opacity-80 whitespace-nowrap mb-2 text-[10px] text-center">
-                                {formatDate(activePoint.date)} • {MOMENTOS.find(m => m.id === activePoint.momento)?.short}
-                            </div>
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); onDelete(activePoint); setActivePoint(null); }}
-                                className="w-full bg-red-600 hover:bg-red-500 text-white text-[10px] py-1 px-2 rounded flex items-center justify-center gap-1"
-                            >
-                                <Trash2 className="w-3 h-3" /> Excluir
-                            </button>
+                            <div className="opacity-80 whitespace-nowrap mb-2 text-[10px] text-center">{formatDate(activePoint.date)} • {MOMENTOS.find(m => m.id === activePoint.momento)?.short}</div>
+                            <button onClick={(e) => { e.stopPropagation(); onDelete(activePoint); setActivePoint(null); }} className="w-full bg-red-600 hover:bg-red-500 text-white text-[10px] py-1 px-2 rounded flex items-center justify-center gap-1"><Trash2 className="w-3 h-3" /> Excluir</button>
                             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-slate-800"></div>
                         </div>
                     )}
-
-                    <div className="overflow-hidden" onClick={handleBgClick}>
+                    <div className="overflow-hidden" onClick={() => { setFocusedMoment(null); setActivePoint(null); }}>
                         <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible touch-none">
-                            {[0, 0.25, 0.5, 0.75, 1].map((p) => (
-                                <line key={p} x1={padding} y1={padding + p * (height - 2 * padding)} x2={width - padding} y2={padding + p * (height - 2 * padding)} stroke="#f1f5f9" strokeWidth="0.5" />
-                            ))}
-                            
+                            {[0, 0.25, 0.5, 0.75, 1].map(p => <line key={p} x1={padding} y1={padding+p*(height-2*padding)} x2={width-padding} y2={padding+p*(height-2*padding)} stroke="#f1f5f9" strokeWidth="0.5" />)}
                             {momentosPresentes.map(mId => {
-                                const momentoConfig = MOMENTOS.find(m => m.id === mId);
-                                const color = momentoConfig ? momentoConfig.color : '#ccc';
-                                const points = data
-                                    .map((d, i) => ({ ...d, originalIndex: i }))
-                                    .filter(d => d.momento === mId)
-                                    .map(d => `${getX(d.originalIndex)},${getY(d.value)}`)
-                                    .join(' ');
-                                if (!points) return null;
-                                
+                                const mConfig = MOMENTOS.find(m => m.id === mId);
+                                const points = data.map((d, i) => ({ ...d, originalIndex: i })).filter(d => d.momento === mId).map(d => `${getX(d.originalIndex)},${getY(d.value)}`).join(' ');
+                                if(!points) return null;
                                 const isDimmed = focusedMoment && focusedMoment !== mId;
-
-                                return (
-                                    <g key={mId} style={{ opacity: isDimmed ? 0.1 : 1, transition: 'opacity 0.3s' }}>
-                                        <polyline points={points} fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" />
-                                        <polyline points={points} fill="none" stroke={color} strokeWidth="0.6" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={getDashArray(momentoConfig.line)} opacity="0.9" />
-                                    </g>
-                                );
+                                return <g key={mId} style={{ opacity: isDimmed ? 0.1 : 1, transition: 'opacity 0.3s' }}><polyline points={points} fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" /><polyline points={points} fill="none" stroke={mConfig.color} strokeWidth="0.6" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={getDashArray(mConfig.line)} opacity="0.9" /></g>;
                             })}
-                            
                             {data.map((d, i) => {
-                                const x = getX(i);
-                                const y = getY(d.value);
+                                const x = getX(i); const y = getY(d.value);
                                 const isActive = activePoint && activePoint.id === d.id;
-                                const momentoConfig = MOMENTOS.find(m => m.id === d.momento);
-                                const shape = momentoConfig ? momentoConfig.shape : 'circle';
-                                const fillColor = d.status === 'warning' ? '#ef4444' : '#22c55e';
+                                const mConfig = MOMENTOS.find(m => m.id === d.momento);
                                 const isDimmed = focusedMoment && focusedMoment !== d.momento;
-                                
-                                return (
-                                    <g key={d.id} onClick={(e) => { e.stopPropagation(); setActivePoint(d); }} className="cursor-pointer" style={{ opacity: isDimmed ? 0.1 : 1, transition: 'opacity 0.3s' }}>
-                                        <circle cx={x} cy={y} r="5" fill="transparent" />
-                                        {renderShape(shape, x, y, isActive ? 3 : 2, 'white', 'white')}
-                                        {renderShape(shape, x, y, isActive ? 2.5 : 1.6, 'white', fillColor)}
-                                    </g>
-                                );
+                                return <g key={d.id} onClick={(e) => { e.stopPropagation(); setActivePoint(d); }} className="cursor-pointer" style={{ opacity: isDimmed ? 0.1 : 1, transition: 'opacity 0.3s' }}><circle cx={x} cy={y} r="5" fill="transparent" />{renderShape(mConfig.shape, x, y, isActive ? 3 : 2, 'white', 'white')}{renderShape(mConfig.shape, x, y, isActive ? 2.5 : 1.6, 'white', d.status === 'warning' ? '#ef4444' : '#22c55e')}</g>;
                             })}
                         </svg>
                     </div>
-
                     <div className="flex flex-wrap gap-x-4 gap-y-2 mt-4 px-2 justify-center">
                         {momentosPresentes.map(mId => {
-                            const m = MOMENTOS.find(item => item.id === mId);
+                            const m = MOMENTOS.find(i => i.id === mId);
                             if(!m) return null;
                             const isSelected = focusedMoment === mId;
                             const isDimmed = focusedMoment && !isSelected;
-
-                            return (
-                                <button key={mId} onClick={() => handleLegendClick(mId)} className={`flex items-center gap-1.5 transition-all duration-200 ${isDimmed ? 'opacity-30' : 'opacity-100'} ${isSelected ? 'scale-110 font-bold' : ''}`}>
-                                    <div className="w-3 h-3 flex items-center justify-center">
-                                        <svg width="12" height="12" viewBox="0 0 10 10">
-                                            {m.shape === 'triangle' && <polygon points="5,1 1,9 9,9" fill={m.color} />}
-                                            {m.shape === 'square' && <rect x="2" y="2" width="6" height="6" fill={m.color} />}
-                                            {m.shape === 'circle' && <circle cx="5" cy="5" r="4" fill={m.color} />}
-                                        </svg>
-                                    </div>
-                                    <span className={`text-[10px] text-slate-600 ${isSelected ? 'text-slate-900' : ''}`}>{m.label}</span>
-                                </button>
-                            )
+                            return <button key={mId} onClick={() => handleLegendClick(mId)} className={`flex items-center gap-1.5 transition-all duration-200 ${isDimmed ? 'opacity-30' : 'opacity-100'} ${isSelected ? 'scale-110 font-bold' : ''}`}><div className="w-3 h-3 flex items-center justify-center"><svg width="12" height="12" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill={m.color} /></svg></div><span className={`text-[10px] text-slate-600 ${isSelected ? 'text-slate-900' : ''}`}>{m.label}</span></button>
                         })}
                     </div>
                 </div>
@@ -366,365 +259,6 @@
         };
 
         const SimpleLineChart = ({ data }) => {
-            const [activePoint, setActivePoint] = useState(null);
-            
             if (!data || data.length === 0) return null;
-
-            const width = 100;
-            const height = 60;
-            const padding = 10;
-            
-            const maxVal = Math.max(...data.map(d => d.value), 160);
-            const minVal = Math.min(...data.map(d => d.value), 60);
-            const rangeY = maxVal - minVal || 1;
-            const rangeX = data.length - 1 || 1;
-
-            const getX = (index) => padding + (index / rangeX) * (width - 2 * padding);
-            const getY = (val) => height - padding - ((val - minVal) / rangeY) * (height - 2 * padding);
-
-            const momentoConfig = MOMENTOS.find(m => m.id === data[0].momento);
-            const color = momentoConfig ? momentoConfig.color : '#ccc';
-            const shape = momentoConfig ? momentoConfig.shape : 'circle';
-            const dashArray = getDashArray(momentoConfig ? momentoConfig.line : 'solid');
-
-            const pointsString = data.map((d, i) => `${getX(i)},${getY(d.value)}`).join(' ');
-
-            return (
-                <div className="relative w-full mt-4">
-                    {activePoint && (
-                        <div className="absolute z-10 bg-slate-800 text-white text-xs p-2 rounded-lg shadow-xl transform -translate-x-1/2 -translate-y-full pointer-events-none"
-                            style={{ left: `${(getX(activePoint.id) / width) * 100}%`, top: `${(getY(activePoint.value) / height) * 100}%`, marginTop: '-10px' }}>
-                            <div className="font-bold text-center">{activePoint.value}</div>
-                            <div className="text-[9px] opacity-80 whitespace-nowrap">Medida {activePoint.id + 1}</div>
-                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-slate-800"></div>
-                        </div>
-                    )}
-
-                    <div className="overflow-hidden" onClick={() => setActivePoint(null)}>
-                        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible touch-none">
-                            {[0, 0.25, 0.5, 0.75, 1].map((p) => (
-                                <line key={p} x1={padding} y1={padding + p * (height - 2 * padding)} x2={width - padding} y2={padding + p * (height - 2 * padding)} stroke="#f1f5f9" strokeWidth="0.5" />
-                            ))}
-                            <g>
-                                <polyline points={pointsString} fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" />
-                                <polyline points={pointsString} fill="none" stroke={color} strokeWidth="0.6" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={dashArray} opacity="0.9" />
-                            </g>
-                            {data.map((d, i) => {
-                                const x = getX(i);
-                                const y = getY(d.value);
-                                const isActive = activePoint && activePoint.id === d.id;
-                                const fillColor = d.status === 'warning' ? '#ef4444' : '#22c55e';
-                                return (
-                                    <g key={d.id} onClick={(e) => { e.stopPropagation(); setActivePoint(d); }} className="cursor-pointer">
-                                        <circle cx={x} cy={y} r="5" fill="transparent" />
-                                        {renderShape(shape, x, y, isActive ? 3 : 2, 'white', 'white')}
-                                        {renderShape(shape, x, y, isActive ? 2.5 : 1.6, 'white', fillColor)}
-                                    </g>
-                                );
-                            })}
-                        </svg>
-                    </div>
-                </div>
-            );
-        };
-
-        const FloatingViewControls = ({ currentView, onViewChange }) => {
-            const options = [
-                { id: 'global', label: 'G', icon: <Globe className="w-4 h-4" />, title: 'Geral' },
-                { id: 'semana', label: 'S', icon: <Calendar className="w-4 h-4" />, title: 'Semana' },
-                { id: 'dia', label: 'D', icon: <Sun className="w-4 h-4" />, title: 'Hoje' }
-            ];
-
-            return (
-                <div className="fixed right-4 top-1/2 transform -translate-y-1/2 z-40 flex flex-col gap-2">
-                    {options.map(opt => (
-                        <button key={opt.id} onClick={() => onViewChange(opt.id)} className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 ${currentView === opt.id ? 'bg-pink-600 text-white scale-110 ring-2 ring-pink-300' : 'bg-white text-slate-500 hover:bg-gray-50'}`} title={opt.title}>
-                            <span className="font-bold text-sm">{opt.label}</span>
-                        </button>
-                    ))}
-                </div>
-            );
-        };
-
-        // --- MODAIS ---
-        const DeleteModal = ({ isOpen, onClose, onConfirm, item }) => {
-            if (!isOpen || !item) return null;
-            return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
-                        <div className="text-center mb-4">
-                            <div className="bg-red-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"><Trash2 className="w-6 h-6 text-red-500" /></div>
-                            <h3 className="text-lg font-bold text-slate-800">Excluir Medida?</h3>
-                            <p className="text-slate-500 text-sm mt-1">{formatDate(item.date)} - {MOMENTOS.find(m => m.id === item.momento)?.label}<br /><span className="font-bold text-slate-700">Valor: {item.value} mg/dL</span></p>
-                        </div>
-                        <div className="flex gap-3">
-                            <button onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-slate-600 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
-                            <button onClick={onConfirm} className="flex-1 py-2.5 text-sm font-bold text-white bg-red-500 rounded-lg hover:bg-red-600 shadow-md shadow-red-200">Sim, Excluir</button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const ReplaceModal = ({ isOpen, onClose, onConfirm, oldItem, newValue }) => {
-            if (!isOpen || !oldItem) return null;
-            return (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
-                        <div className="text-center mb-4">
-                            <div className="bg-yellow-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"><RefreshCw className="w-6 h-6 text-yellow-600" /></div>
-                            <h3 className="text-lg font-bold text-slate-800">Substituir Registro?</h3>
-                            <p className="text-slate-500 text-sm mt-1">Já existe uma medida de <b>{MOMENTOS.find(m => m.id === oldItem.momento)?.label}</b> no dia <b>{formatDate(oldItem.date)}</b>.</p>
-                            <div className="bg-slate-50 p-2 rounded mt-3 text-sm flex justify-center gap-4 border border-slate-100">
-                                <div><span className="block text-xs text-slate-400">Atual</span><span className="font-bold text-slate-600">{oldItem.value}</span></div>
-                                <div className="flex items-center text-slate-300">→</div>
-                                <div><span className="block text-xs text-pink-500 font-bold">Novo</span><span className="font-bold text-slate-800">{newValue}</span></div>
-                            </div>
-                        </div>
-                        <div className="flex gap-3">
-                            <button onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-slate-600 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
-                            <button onClick={onConfirm} className="flex-1 py-2.5 text-sm font-bold text-white bg-pink-500 rounded-lg hover:bg-pink-600 shadow-md shadow-pink-200">Substituir</button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const LoginScreen = ({ onLogin, loading }) => {
-            const [cpf, setCpf] = useState('');
-            const [dob, setDob] = useState('');
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                if(cpf.length >= 4 && dob) onLogin({ cpf, dob });
-                else alert("Preencha CPF e Data");
-            }
-            return (
-                <div className="min-h-screen bg-pink-50 flex items-center justify-center p-4">
-                    <Card className="w-full max-w-sm p-8 shadow-xl text-center animate-in fade-in zoom-in duration-300">
-                        <div className="bg-pink-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-pink-200"><Activity className="text-white w-8 h-8" /></div>
-                        <h1 className="text-2xl font-bold text-slate-800">Diário Glicêmico</h1>
-                        <p className="text-slate-500 text-sm mt-1">Acesso ao Monitoramento DMG</p>
-                        <form onSubmit={handleSubmit} className="space-y-5 mt-6 text-left">
-                            <div><label className="block text-sm font-medium text-slate-700 mb-1">CPF (4 primeiros dígitos)</label><input type="number" placeholder="Ex: 1234" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 outline-none text-center text-lg tracking-widest" value={cpf} onChange={e => setCpf(e.target.value.slice(0,4))} required /></div>
-                            <div><label className="block text-sm font-medium text-slate-700 mb-1">Data de Nascimento</label><input type="date" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 outline-none" value={dob} onChange={e => setDob(e.target.value)} required /></div>
-                            <Button type="submit" className="w-full py-4 text-lg shadow-lg" disabled={loading}>{loading ? 'Conectando...' : 'Acessar Meu Diário'}</Button>
-                        </form>
-                    </Card>
-                </div>
-            );
-        };
-
-        // --- APP PRINCIPAL ---
-        function GestaGlicApp() {
-            const [user, setUser] = useState(null);
-            const [userId, setUserId] = useState(null);
-            const [logs, setLogs] = useState([]);
-            const [loading, setLoading] = useState(false);
-            const [activeTab, setActiveTab] = useState('diario');
-            const [viewPeriod, setViewPeriod] = useState('global');
-            
-            const [showAddModal, setShowAddModal] = useState(false);
-            const [newValue, setNewValue] = useState('');
-            const [newMomento, setNewMomento] = useState('jejum');
-            const [newDate, setNewDate] = useState(getLocalDate());
-            
-            const [deletingLog, setDeletingLog] = useState(null);
-            const [pendingLog, setPendingLog] = useState(null);
-            const [showReplaceModal, setShowReplaceModal] = useState(false);
-
-            const [quickInput, setQuickInput] = useState('');
-            const [quickMomento, setQuickMomento] = useState('jejum');
-            const [quickData, setQuickData] = useState([]);
-            const [quickStats, setQuickStats] = useState(null);
-
-            useEffect(() => {
-                const savedId = localStorage.getItem('gestaglic_user_id');
-                const savedInfo = localStorage.getItem('gestaglic_user_info');
-                if (savedId && savedInfo) {
-                    setUserId(savedId);
-                    setUser(JSON.parse(savedInfo));
-                    fetchLogs(savedId);
-                }
-            }, []);
-
-            const handleLogin = async (credentials) => {
-                setLoading(true);
-                try {
-                    const cleanCpf = credentials.cpf.replace(/\D/g, '');
-                    const cleanDob = credentials.dob.replace(/\D/g, '');
-                    const data = await apiCall({ method: 'POST', body: JSON.stringify({ action: 'login', cpf: cleanCpf, dob: cleanDob }) });
-                    if (data.user_id) {
-                        setUserId(data.user_id);
-                        setUser(credentials);
-                        localStorage.setItem('gestaglic_user_id', data.user_id);
-                        localStorage.setItem('gestaglic_user_info', JSON.stringify(credentials));
-                        fetchLogs(data.user_id);
-                    }
-                } catch (e) { alert("Erro no login: " + e.message); } finally { setLoading(false); }
-            };
-
-            const handleLogout = () => { localStorage.clear(); setUser(null); setUserId(null); setLogs([]); };
-
-            const fetchLogs = async (id) => {
-                try {
-                    const data = await apiCall({ method: 'GET', headers: { 'x-user-id': id } });
-                    if (Array.isArray(data)) setLogs(data);
-                } catch (e) { console.error(e); }
-            };
-
-            const handleAddLog = async (e) => {
-                e.preventDefault();
-                if (!newValue) return;
-                const existing = logs.find(l => l.date === newDate && l.momento === newMomento);
-                const logData = { date: newDate, value: parseInt(newValue), momento: newMomento, status: checkTarget(parseInt(newValue), newMomento) };
-                if (existing) { setPendingLog(logData); setShowReplaceModal(true); return; }
-                saveLogToDb(logData);
-            };
-
-            const saveLogToDb = async (logData) => {
-                setLogs(prev => [{...logData, id: Date.now()}, ...prev]);
-                setShowAddModal(false); setNewValue(''); setShowReplaceModal(false); setPendingLog(null);
-                try {
-                    await apiCall({ method: 'POST', headers: { 'x-user-id': userId, 'Content-Type': 'application/json' }, body: JSON.stringify(logData) });
-                    setTimeout(() => fetchLogs(userId), 500);
-                } catch (e) { alert("Erro ao salvar: " + e.message); }
-            };
-
-            const confirmDelete = async () => {
-                if (!deletingLog) return;
-                setLogs(logs.filter(l => l.id !== deletingLog.id)); setDeletingLog(null);
-                try { await apiCall({ method: 'DELETE', headers: { 'x-user-id': userId }, body: JSON.stringify({ id: deletingLog.id }) }); } catch (e) { alert("Erro ao deletar"); }
-            };
-
-            const confirmReplace = async () => {
-                if (!pendingLog) return;
-                const existing = logs.find(l => l.date === pendingLog.date && l.momento === pendingLog.momento);
-                if (existing) {
-                    try { await apiCall({ method: 'DELETE', headers: { 'x-user-id': userId }, body: JSON.stringify({ id: existing.id }) }); } catch(e) {}
-                }
-                saveLogToDb(pendingLog);
-            };
-
-            function calculateStats(data) {
-                if (data.length === 0) return { total: 0, inTarget: 0, percent: 0, avg: 0 };
-                const inTarget = data.filter(l => l.status === 'success').length;
-                const sum = data.reduce((acc, curr) => acc + curr.value, 0);
-                return { total: data.length, inTarget, percent: Math.round((inTarget / data.length) * 100), avg: Math.round(sum / data.length) };
-            }
-
-            const filteredLogs = useMemo(() => {
-                let data = [...logs];
-                const todayStr = getLocalDate();
-                if (viewPeriod === 'semana') {
-                    const d = new Date(); d.setDate(d.getDate() - 7);
-                    const weekAgo = d.toISOString().split('T')[0];
-                    data = data.filter(l => l.date >= weekAgo);
-                } else if (viewPeriod === 'dia') {
-                    data = data.filter(l => l.date === todayStr);
-                }
-                return data;
-            }, [logs, viewPeriod]);
-
-            const globalStats = useMemo(() => calculateStats(filteredLogs), [filteredLogs]);
-            const statsByMomento = useMemo(() => {
-                const res = [];
-                MOMENTOS.forEach(m => {
-                    const f = filteredLogs.filter(l => l.momento === m.id);
-                    if (f.length > 0) res.push({ ...m, stats: calculateStats(f) });
-                });
-                return res;
-            }, [filteredLogs]);
-
-            useEffect(() => {
-                if (activeTab !== 'calculo') return;
-                const vals = quickInput.split(/[\s,]+/).map(v => parseInt(v.trim())).filter(n => !isNaN(n));
-                if (vals.length > 0) {
-                    const proc = vals.map((v, i) => ({ value: v, status: checkTarget(v, quickMomento), id: i, momento: quickMomento }));
-                    setQuickData(proc); setQuickStats(calculateStats(proc));
-                } else { setQuickStats(null); setQuickData([]); }
-            }, [quickInput, quickMomento, activeTab]);
-
-            if (!user) return <LoginScreen onLogin={handleLogin} loading={loading} />;
-
-            return (
-                <div className="min-h-screen bg-pink-50 font-sans text-slate-800 pb-24">
-                    <div className="sticky top-0 z-30 bg-white shadow-sm border-b border-pink-100">
-                        <header className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="bg-pink-500 p-2 rounded-lg">{activeTab === 'calculo' ? <Calculator className="text-white w-5 h-5"/> : <Activity className="text-white w-5 h-5" />}</div>
-                                <div><h1 className="text-lg font-bold text-slate-800 leading-tight">{activeTab === 'calculo' ? 'Cálculo Rápido' : 'Diário'}</h1><p className="text-[10px] text-slate-500 font-medium">Olá, Mamãe (CPF: ...{user.cpf})</p></div>
-                            </div>
-                            <button onClick={handleLogout} className="text-pink-600 p-2 hover:bg-pink-50 rounded-full"><LogOut className="w-5 h-5" /></button>
-                        </header>
-                    </div>
-
-                    {activeTab === 'diario' && <FloatingViewControls currentView={viewPeriod} onViewChange={setViewPeriod} />}
-                    <DeleteModal isOpen={!!deletingLog} onClose={() => setDeletingLog(null)} onConfirm={confirmDelete} item={deletingLog} />
-                    <ReplaceModal isOpen={showReplaceModal} onClose={() => { setShowReplaceModal(false); setPendingLog(null); }} onConfirm={confirmReplace} oldItem={pendingLog && logs.find(l => l.date === pendingLog.date && l.momento === pendingLog.momento)} newValue={pendingLog?.value} />
-
-                    <main className="max-w-md mx-auto px-4 py-6 space-y-6">
-                        {activeTab === 'diario' && (
-                        <>
-                            <div className="grid grid-cols-2 gap-3">
-                                <Card className="p-4 bg-gradient-to-br from-pink-500 to-rose-400 text-white relative flex flex-col h-full">
-                                    <div className="flex justify-between items-start"><p className="text-pink-100 text-xs font-medium mb-1">Média</p><span className="text-[10px] bg-white/20 px-1.5 rounded uppercase">{viewPeriod === 'global' ? 'Geral' : viewPeriod}</span></div>
-                                    <h2 className="text-3xl font-bold">{globalStats.avg || '--'}</h2>
-                                    <span className="text-xs text-pink-100 opacity-80">mg/dL</span>
-                                    {statsByMomento.length > 0 && <div className="mt-2 pt-2 border-t border-white/20 space-y-1">{statsByMomento.map(i => <div key={i.id} className="flex justify-between text-[10px]"><span className="text-pink-50">{i.label}</span><span className="font-bold">{i.stats.avg}</span></div>)}</div>}
-                                </Card>
-                                <Card className="p-4 flex flex-col h-full">
-                                    <p className="text-slate-500 text-xs font-medium mb-1">Na Meta</p>
-                                    <h2 className={`text-3xl font-bold ${globalStats.percent < 70 ? 'text-red-500' : 'text-green-600'}`}>{globalStats.percent}%</h2>
-                                    <div className="w-full bg-gray-200 rounded-full h-1 mt-1"><div className={`h-1 rounded-full ${globalStats.percent < 70 ? 'bg-red-500' : 'bg-green-500'}`} style={{ width: `${globalStats.percent}%` }}></div></div>
-                                    {statsByMomento.length > 0 && <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">{statsByMomento.map(i => <div key={i.id} className="flex justify-between text-[10px]"><span className="text-slate-500 truncate w-12">{i.label}</span><span className={`font-bold ${i.stats.percent < 70 ? 'text-red-500' : 'text-green-600'}`}>{i.stats.percent}%</span></div>)}</div>}
-                                </Card>
-                            </div>
-                            <Button onClick={() => setShowAddModal(true)} className="w-full shadow-lg shadow-pink-200/50"><PlusCircle className="w-5 h-5" /> Nova Medida</Button>
-                            {showAddModal && (
-                                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                                    <Card className="w-full max-w-sm p-6 animate-in fade-in zoom-in duration-200">
-                                        <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold">Registrar Glicemia</h3><button onClick={() => setShowAddModal(false)}><X className="w-5 h-5 text-gray-400"/></button></div>
-                                        <form onSubmit={handleAddLog} className="space-y-4">
-                                            <div><label className="block text-sm text-slate-600 mb-1">Data</label><input type="date" required className="w-full p-2 border rounded-lg" value={newDate} onChange={e=>setNewDate(e.target.value)} /></div>
-                                            <div><label className="block text-sm text-slate-600 mb-1">Momento</label><select className="w-full p-2 border rounded-lg" value={newMomento} onChange={e=>setNewMomento(e.target.value)}>{MOMENTOS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}</select><p className="text-xs text-slate-500 mt-1">Meta: {'<'} {MOMENTOS.find(m => m.id === newMomento)?.target} mg/dL</p></div>
-                                            <div><label className="block text-sm text-slate-600 mb-1">Valor (mg/dL)</label><input type="number" required placeholder="Ex: 98" className="w-full p-2 border rounded-lg text-lg font-semibold text-center" value={newValue} onChange={e=>setNewValue(e.target.value)} /></div>
-                                            <div className="flex gap-2 pt-2"><Button variant="ghost" className="flex-1" onClick={() => setShowAddModal(false)}>Cancelar</Button><Button type="submit" className="flex-1">Salvar</Button></div>
-                                        </form>
-                                    </Card>
-                                </div>
-                            )}
-                            <Card className="p-4"><div className="flex items-center justify-between mb-4"><h3 className="font-bold text-slate-700 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-pink-500" /> Evolução</h3></div><MultiLineChart logs={filteredLogs} onDelete={setDeletingLog} /></Card>
-                            <div className="space-y-3"><h3 className="font-bold text-slate-700 flex items-center gap-2"><ListIcon className="w-4 h-4 text-pink-500" /> Tabela de Registros</h3><PivotTable logs={filteredLogs} onDelete={setDeletingLog} /></div>
-                        </>
-                        )}
-                        {activeTab === 'calculo' && (
-                            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                                <Card className="p-5"><h2 className="text-lg font-bold text-slate-800 mb-2">Simulador Rápido</h2><p className="text-sm text-slate-500 mb-4">Insira múltiplos valores para calcular a média instantânea.</p><div className="space-y-4"><select className="w-full p-2 border rounded-lg" value={quickMomento} onChange={e => setQuickMomento(e.target.value)}>{MOMENTOS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}</select><textarea rows="3" className="w-full p-3 border rounded-lg font-mono" placeholder="Ex: 92 98 105" value={quickInput} onChange={e => setQuickInput(e.target.value)} /></div></Card>
-                                {quickStats && <><div className="grid grid-cols-2 gap-3"><Card className="p-4 bg-gradient-to-br from-pink-500 to-rose-400 text-white"><p className="text-pink-100 text-xs font-medium mb-1">Média Calculada</p><h2 className="text-3xl font-bold">{quickStats.avg}</h2><span className="text-xs text-pink-100 opacity-80">mg/dL ({quickStats.total} medidas)</span></Card><Card className="p-4"><p className="text-slate-500 text-xs font-medium mb-1">Na Meta</p><h2 className={`text-3xl font-bold ${quickStats.percent < 70 ? 'text-red-500' : 'text-green-600'}`}>{quickStats.percent}%</h2><div className="w-full bg-gray-200 rounded-full h-1 mt-2"><div className={`h-1 rounded-full ${quickStats.percent < 70 ? 'bg-red-500' : 'bg-green-500'}`} style={{ width: `${quickStats.percent}%` }}></div></div></Card></div><Card className="p-4"><div className="flex items-center justify-between mb-4"><h3 className="font-bold text-slate-700 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-pink-500" /> Tendência da Simulação</h3></div><SimpleLineChart data={quickData} /></Card></>}
-                            </div>
-                        )}
-                        {activeTab === 'educacao' && (
-                            <div className="space-y-4"><h2 className="text-xl font-bold text-slate-800">Nutrição Saudável</h2><p className="text-sm text-slate-600">Recomendações baseadas no Guia Alimentar para a População Brasileira.</p><InfoCard title="Fracionamento das Refeições" icon={<Utensils className="w-5 h-5 text-pink-500"/>} content="Comer pequenas porções várias vezes ao dia (5 a 6 refeições) ajuda a manter a glicemia estável e evita picos de fome." /><InfoCard title="Prefira Integrais" icon={<CheckCircle className="w-5 h-5 text-green-500"/>} content="Arroz integral, aveia e pães integrais possuem mais fibras. As fibras diminuem a velocidade com que o açúcar entra no sangue." /><div className="bg-blue-50 p-4 rounded-xl border border-blue-100"><h3 className="font-bold text-blue-800 mb-2">Modelo do Prato Saudável</h3><ul className="text-sm text-blue-700 space-y-1 list-disc pl-4"><li>50% Salada (Vegetais crus e cozidos)</li><li>25% Proteína (Carne magra, frango, peixe, ovo)</li><li>25% Carboidrato (Arroz integral, batata, mandioca)</li></ul></div></div>
-                        )}
-                        {activeTab === 'exercicios' && (
-                            <div className="space-y-4"><h2 className="text-xl font-bold text-slate-800">Atividade Física</h2><p className="text-sm text-slate-600">O exercício funciona como 'insulina natural', ajudando a baixar a glicemia.</p><Card className="p-4 border-l-4 border-l-green-500"><h3 className="font-bold text-lg mb-2">A Meta de Ouro</h3><p className="text-slate-600 mb-2">150 minutos por semana de atividade leve a moderada.</p></Card><InfoCard title="Benefícios na Gestação" icon={<Heart className="w-5 h-5 text-red-500"/>} content="Melhora a circulação, reduz inchaço, controla o peso, melhora o humor e prepara o corpo para o parto." /><InfoCard title="Sinais de Alerta (Pare!)" icon={<AlertCircle className="w-5 h-5 text-red-500"/>} content="Pare o exercício imediatamente se sentir: tontura, falta de ar excessiva, dor no peito, contrações uterinas ou sangramento." /></div>
-                        )}
-                    </main>
-
-                    <nav className="fixed bottom-0 w-full bg-white border-t border-gray-100 pb-safe z-50">
-                        <div className="max-w-md mx-auto flex justify-around p-2">
-                            <NavButton active={activeTab === 'diario'} onClick={() => setActiveTab('diario')} icon={<Activity />} label="Diário" />
-                            <NavButton active={activeTab === 'calculo'} onClick={() => setActiveTab('calculo')} icon={<Calculator />} label="Cálculo" />
-                            <NavButton active={activeTab === 'educacao'} onClick={() => setActiveTab('educacao')} icon={<Utensils />} label="Nutrição" />
-                            <NavButton active={activeTab === 'exercicios'} onClick={() => setActiveTab('exercicios')} icon={<Heart />} label="Atividade" />
-                        </div>
-                    </nav>
-                </div>
-            );
-        }
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<GestaGlicApp />);
-    </script>
-</body>
-</html>
+            const width = 100, height = 40, padding = 2;
+            const maxVal = Math.max(...data.map(d =>
