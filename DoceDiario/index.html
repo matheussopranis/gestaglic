@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diário Glicêmico - Monitoramento DMG</title>
+    <title>Diário Glicêmico - Gestante</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -62,7 +62,6 @@
         };
 
         // --- 2. COMUNICAÇÃO COM O BANCO (API) ---
-        // Esta é a parte que conecta o visual bonito ao backend que consertamos
         
         async function apiCall(options = {}) {
             const url = '/.netlify/functions/api';
@@ -72,14 +71,13 @@
 
                 if (!response.ok) {
                     if (response.status === 404) throw new Error("Erro 404: API não encontrada.");
-                    if (response.status === 500) throw new Error("Erro 500 no servidor.");
-                    throw new Error(`Erro: ${rawText}`);
+                    if (response.status === 500) throw new Error("Erro 500: Erro no servidor.");
+                    throw new Error(`Erro ${response.status}: ${rawText}`);
                 }
                 try {
                     return JSON.parse(rawText);
                 } catch (e) {
-                    // Se o servidor retornar vazio ou texto, trata gentilmente
-                    return {};
+                    throw new Error("Resposta inválida do servidor.");
                 }
             } catch (error) {
                 console.error("Fetch Error:", error);
@@ -87,15 +85,16 @@
             }
         }
 
-        // --- 3. ÍCONES & UI (Visual Rico) ---
+        // --- 3. ÍCONES & UI ---
 
         const Icon = ({ path, className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{path}</svg>;
         
+        // Ícones Específicos
         const Activity = (p) => <Icon {...p} path={<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />} />;
         const Heart = (p) => <Icon {...p} path={<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />} />;
         const Utensils = (p) => <Icon {...p} path={<><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></>} />;
         const PlusCircle = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></>} />;
-        const Trash2 = (p) => <Icon {...p} path={<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>} />;
+        const Trash2 = (p) => <Icon {...p} path={<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>} />;
         const TrendingUp = (p) => <Icon {...p} path={<polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />} />;
         const AlertCircle = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />;
         const CheckCircle = (p) => <Icon {...p} path={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} />;
@@ -104,7 +103,6 @@
         const LogOut = (p) => <Icon {...p} path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></>} />;
         const ChevronDown = (p) => <Icon {...p} path={<polyline points="6 9 12 15 18 9"/>} />;
         const ChevronUp = (p) => <Icon {...p} path={<polyline points="18 15 12 9 6 15"/>} />;
-        const X = (p) => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>} />;
 
         const Card = ({ children, className = "" }) => <div className={`bg-white rounded-xl shadow-sm border border-pink-100 overflow-hidden ${className}`}>{children}</div>;
         
@@ -112,7 +110,9 @@
             const baseStyle = "px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-95";
             const variants = {
                 primary: "bg-pink-500 hover:bg-pink-600 text-white shadow-md shadow-pink-200",
+                outline: "border-2 border-pink-500 text-pink-600 hover:bg-pink-50",
                 ghost: "text-gray-500 hover:bg-gray-100",
+                danger: "text-red-500 hover:bg-red-50"
             };
             return <button type={type} onClick={onClick} className={`${baseStyle} ${variants[variant]} ${className}`}>{children}</button>;
         };
@@ -137,7 +137,7 @@
             );
         };
 
-        // --- 4. TABELAS E GRÁFICOS COMPLEXOS ---
+        // --- 4. COMPONENTES VISUAIS COMPLEXOS ---
 
         const PivotTable = ({ logs, onDelete }) => {
             const groupedData = useMemo(() => {
@@ -187,7 +187,7 @@
         };
 
         const MultiLineChart = ({ logs }) => {
-            // Versão simplificada e robusta do gráfico para não quebrar no mobile
+            // Versão simplificada do gráfico para garantir estabilidade
             let data = [...logs];
             data.sort((a, b) => new Date(a.date) - new Date(b.date) || a.id - b.id);
             
@@ -202,50 +202,21 @@
             const getX = (i) => padding + (i / rangeX) * (width - 2 * padding);
             const getY = (val) => height - padding - ((val - minVal) / rangeY) * (height - 2 * padding);
             
-            // Desenha apenas uma linha geral para simplificar a visualização
             const points = data.map((d, i) => `${getX(i)},${getY(d.value)}`).join(' ');
 
             return (
                 <div className="w-full mt-4">
                     <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
-                        {/* Linha Guia */}
-                        <line x1={padding} y1={getY(95)} x2={width-padding} y2={getY(95)} stroke="#cbd5e1" strokeWidth="0.5" strokeDasharray="2" />
-                        
                         <polyline points={points} fill="none" stroke="#ec4899" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
                         {data.map((d, i) => (
                             <circle key={d.id} cx={getX(i)} cy={getY(d.value)} r="2" fill={d.status === 'success' ? '#22c55e' : '#ef4444'} stroke="white" strokeWidth="0.5" />
                         ))}
                     </svg>
-                    <div className="flex justify-between text-[8px] text-gray-400 mt-1 px-2">
-                        <span>{formatDate(data[0].date)}</span>
-                        <span>{formatDate(data[data.length-1].date)}</span>
-                    </div>
                 </div>
             );
         };
 
-        const SimpleLineChart = ({ data }) => {
-            if (!data || data.length === 0) return null;
-            const width = 100, height = 40, padding = 2;
-            const maxVal = Math.max(...data.map(d => d.value));
-            const minVal = Math.min(...data.map(d => d.value));
-            const rangeY = maxVal - minVal || 1;
-            const rangeX = data.length - 1 || 1;
-            const getX = (i) => padding + (i / rangeX) * (width - 2 * padding);
-            const getY = (val) => height - padding - ((val - minVal) / rangeY) * (height - 2 * padding);
-            const points = data.map((d, i) => `${getX(i)},${getY(d.value)}`).join(' ');
-
-            return (
-                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
-                    <polyline points={points} fill="none" stroke="#ec4899" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    {data.map((d, i) => (
-                        <circle key={i} cx={getX(i)} cy={getY(d.value)} r="2" fill={d.status === 'success' ? '#22c55e' : '#ef4444'} />
-                    ))}
-                </svg>
-            );
-        };
-
-        // --- 5. TELA DE LOGIN ---
+        // --- 5. TELA DE LOGIN (SIMPLIFICADA E FUNCIONAL) ---
         const LoginScreen = ({ onLogin, loading }) => {
             const [cpf, setCpf] = useState('');
             const [dob, setDob] = useState('');
@@ -258,25 +229,25 @@
             };
             return (
                 <div className="min-h-screen bg-pink-50 flex items-center justify-center p-4">
-                    <Card className="w-full max-w-sm p-8 shadow-xl text-center space-y-6 animate-in fade-in zoom-in duration-300">
+                    <Card className="w-full max-w-sm p-8 shadow-xl text-center space-y-6">
                         <div className="bg-pink-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-pink-200">
                             <Activity className="text-white w-8 h-8" />
                         </div>
                         <div>
                             <h1 className="text-2xl font-bold text-slate-800">Diário Glicêmico</h1>
-                            <p className="text-slate-500 text-sm">Acesso Simplificado</p>
+                            <p className="text-slate-500 text-sm">Acesso Simplificado para Gestantes</p>
                         </div>
                         <form onSubmit={handleSubmit} className="space-y-4 text-left">
                             <input type="number" maxLength="4" placeholder="CPF (4 primeiros dígitos)" className="w-full p-3 border rounded-lg text-center text-xl outline-pink-500" value={cpf} onChange={e => setCpf(e.target.value)} autoFocus />
                             <input type="tel" maxLength="8" placeholder="Nascimento (DDMMAAAA)" className="w-full p-3 border rounded-lg text-center text-xl outline-pink-500" value={dob} onChange={e => setDob(e.target.value)} />
-                            <Button type="submit" className="w-full py-4 text-lg" disabled={loading}>{loading ? 'Conectando...' : 'Entrar'}</Button>
+                            <Button type="submit" className="w-full py-4 text-lg" disabled={loading}>{loading ? 'Acessando...' : 'Acessar'}</Button>
                         </form>
                     </Card>
                 </div>
             );
         };
 
-        // --- 6. APLICAÇÃO PRINCIPAL (LÓGICA UNIFICADA) ---
+        // --- 6. APLICAÇÃO PRINCIPAL ---
 
         function GestaGlicApp() {
             const [userId, setUserId] = useState(null);
@@ -292,17 +263,13 @@
 
             // Calc Rápido
             const [quickInput, setQuickInput] = useState('');
-            const [quickMomento, setQuickMomento] = useState('jejum');
-            const [quickData, setQuickData] = useState([]);
-            const [quickStats, setQuickStats] = useState(null);
+            const [quickResult, setQuickResult] = useState(null);
 
-            // Inicialização: Verifica se já tem ID salvo
             useEffect(() => {
                 const savedId = localStorage.getItem('gestaglic_user_id');
                 if (savedId) { setUserId(savedId); fetchLogs(savedId); }
             }, []);
 
-            // Login Real via API
             const handleLogin = async (cpf, dob) => {
                 setLoading(true);
                 try {
@@ -315,7 +282,6 @@
                 } catch (e) { alert(e.message); } finally { setLoading(false); }
             };
 
-            // Busca Dados via API
             const fetchLogs = async (id) => {
                 try {
                     const data = await apiCall({ method: 'GET', headers: { 'x-user-id': id || userId } });
@@ -323,29 +289,18 @@
                 } catch (e) { console.error(e); }
             };
 
-            // Salva Dados via API
             const handleAddLog = async (e) => {
                 e.preventDefault();
                 if (!newValue) return;
-                
                 const logData = { date: newDate, value: parseInt(newValue), momento: newMomento, status: checkTarget(parseInt(newValue), newMomento) };
-                
-                // Atualização Otimista (mostra antes de confirmar)
                 setLogs(prev => [{...logData, id: Date.now()}, ...prev]); 
                 setShowAddModal(false); setNewValue('');
-
                 try {
-                    await apiCall({ 
-                        method: 'POST', 
-                        headers: { 'x-user-id': userId, 'Content-Type': 'application/json' }, 
-                        body: JSON.stringify(logData) 
-                    });
-                    // Recarrega para garantir sincronia e IDs reais do banco
-                    setTimeout(() => fetchLogs(userId), 500); 
+                    await apiCall({ method: 'POST', headers: { 'x-user-id': userId, 'Content-Type': 'application/json' }, body: JSON.stringify(logData) });
+                    fetchLogs(userId);
                 } catch (e) { alert("Erro ao salvar: " + e.message); }
             };
 
-            // Deleta via API
             const handleDelete = async (id) => {
                 if(!confirm("Deseja apagar este registro?")) return;
                 setLogs(logs.filter(l => l.id !== id));
@@ -354,30 +309,12 @@
 
             const handleLogout = () => { localStorage.removeItem('gestaglic_user_id'); setUserId(null); setLogs([]); };
 
-            // Cálculos para o Dashboard
             const calcStats = useMemo(() => {
                 if(logs.length === 0) return { avg: 0, percent: 0 };
                 const sum = logs.reduce((a, b) => a + b.value, 0);
                 const inTarget = logs.filter(l => l.status === 'success').length;
                 return { avg: Math.round(sum / logs.length), percent: Math.round((inTarget / logs.length) * 100) };
             }, [logs]);
-
-            // Lógica Calculadora Rápida
-            useEffect(() => {
-                if (activeTab !== 'calculo') return;
-                const vals = quickInput.split(/[\s,]+/).map(v => parseInt(v.trim())).filter(n => !isNaN(n));
-                
-                if (vals.length > 0) {
-                    const processed = vals.map((v, i) => ({ value: v, status: checkTarget(v, quickMomento), id: i }));
-                    setQuickData(processed);
-                    const sum = vals.reduce((a, b) => a + b, 0);
-                    const inTarget = processed.filter(p => p.status === 'success').length;
-                    setQuickStats({ avg: Math.round(sum / vals.length), percent: Math.round((inTarget / vals.length) * 100), total: vals.length });
-                } else {
-                    setQuickStats(null);
-                    setQuickData([]);
-                }
-            }, [quickInput, quickMomento, activeTab]);
 
             if (!userId) return <LoginScreen onLogin={handleLogin} loading={loading} />;
 
@@ -387,11 +324,9 @@
                     <div className="sticky top-0 z-30 bg-white shadow-sm border-b border-pink-100">
                         <header className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <div className="bg-pink-500 p-2 rounded-lg">
-                                    {activeTab === 'calculo' ? <Calculator className="text-white w-5 h-5"/> : <Activity className="text-white w-5 h-5" />}
-                                </div>
+                                <div className="bg-pink-500 p-2 rounded-lg"><Activity className="text-white w-5 h-5" /></div>
                                 <div>
-                                    <h1 className="text-lg font-bold text-slate-800 leading-tight">{activeTab === 'calculo' ? 'Cálculo Rápido' : 'Diário'}</h1>
+                                    <h1 className="text-lg font-bold text-slate-800 leading-tight">{activeTab === 'calculo' ? 'Calculadora' : 'Diário'}</h1>
                                     <p className="text-[10px] text-slate-500">Gestante Monitorada</p>
                                 </div>
                             </div>
@@ -432,26 +367,17 @@
 
                         {/* ABA CALCULO */}
                         {activeTab === 'calculo' && (
-                            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                            <div className="space-y-4">
                                 <Card className="p-5">
                                     <h2 className="text-lg font-bold text-slate-800 mb-2">Simulador Rápido</h2>
-                                    <p className="text-sm text-slate-500 mb-4">Teste valores sem salvar no diário.</p>
-                                    <div className="space-y-4">
-                                        <select className="w-full p-2 border rounded-lg" value={quickMomento} onChange={e => setQuickMomento(e.target.value)}>
-                                            {MOMENTOS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
-                                        </select>
-                                        <textarea rows="3" className="w-full p-3 border rounded-lg font-mono" placeholder="Ex: 92 98 105" value={quickInput} onChange={e => setQuickInput(e.target.value)}/>
-                                    </div>
+                                    <textarea rows="3" className="w-full p-3 border rounded-lg mb-4" placeholder="Digite valores: 92 98 105..." value={quickInput} onChange={e => {
+                                        setQuickInput(e.target.value);
+                                        const vals = e.target.value.split(/[\s,]+/).map(v => parseInt(v)).filter(n => !isNaN(n));
+                                        if(vals.length > 0) setQuickResult(Math.round(vals.reduce((a,b)=>a+b,0)/vals.length));
+                                        else setQuickResult(null);
+                                    }}/>
+                                    {quickResult && <div className="text-center p-4 bg-pink-50 rounded-lg"><p>Média Simulada</p><h2 className="text-3xl font-bold text-pink-600">{quickResult}</h2></div>}
                                 </Card>
-                                {quickStats && (
-                                    <>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <Card className="p-4 bg-pink-500 text-white"><p className="text-xs opacity-80">Média Simulada</p><h2 className="text-2xl font-bold">{quickStats.avg}</h2></Card>
-                                            <Card className="p-4"><p className="text-xs text-slate-500">Na Meta</p><h2 className={`text-2xl font-bold ${quickStats.percent < 70 ? 'text-red-500' : 'text-green-500'}`}>{quickStats.percent}%</h2></Card>
-                                        </div>
-                                        <Card className="p-4"><SimpleLineChart data={quickData}/></Card>
-                                    </>
-                                )}
                             </div>
                         )}
 
@@ -461,9 +387,6 @@
                                 <h2 className="text-xl font-bold text-slate-800">Nutrição</h2>
                                 <InfoCard title="Fracionamento" icon={<Utensils className="w-5 h-5 text-pink-500"/>} content="Comer pequenas porções várias vezes ao dia (5 a 6 refeições)." />
                                 <InfoCard title="Integrais" icon={<CheckCircle className="w-5 h-5 text-green-500"/>} content="Prefira arroz integral, aveia e pães integrais." />
-                                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-sm text-blue-800">
-                                    <strong>Prato Ideal:</strong> 50% Salada, 25% Proteína, 25% Carboidrato.
-                                </div>
                             </div>
                         )}
 
@@ -481,10 +404,7 @@
                     {showAddModal && (
                         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                             <Card className="w-full max-w-sm p-6 animate-in zoom-in duration-200">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="text-lg font-bold">Nova Medida</h3>
-                                    <button onClick={() => setShowAddModal(false)}><X className="w-5 h-5 text-gray-400"/></button>
-                                </div>
+                                <h3 className="text-lg font-bold mb-4">Nova Medida</h3>
                                 <form onSubmit={handleAddLog} className="space-y-4">
                                     <input type="date" value={newDate} onChange={e=>setNewDate(e.target.value)} className="w-full p-2 border rounded-lg" required />
                                     <select value={newMomento} onChange={e=>setNewMomento(e.target.value)} className="w-full p-2 border rounded-lg bg-white">
